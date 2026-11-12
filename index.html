@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>হিসাব খাতা - অ্যাডভান্সড, ফায়ারবেস ও EmailJS OTP সংস্করণ</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- EmailJS SDK -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+<!-- Export Libraries: SheetJS (Excel) & html2pdf (PDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #eef2f3;
+    color: #333;
+    padding: 10px;
+}
+
+#main-screen {
+    max-width: 1200px;
+    margin: 10px auto;
+}
+
+h1, h2, h3, h4 {
+    text-align: center;
+    color: #1e293b;
+}
+
+.box {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,.05);
+    margin-bottom: 20px;
+}
+
+/* ফর্ম ও ইনপুট রেসপন্সিভ ডিজাইন */
+#input-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+input, button, select {
+    padding: 10px 12px;
+    margin: 4px 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+input:focus, select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+#input-form input, #input-form select {
+    flex: 1;
+    min-width: 130px;
+}
+
+#input-form button {
+    background: #2563eb;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+button {
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* টেবিল রেসপন্সিভ স্ক্রোল */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    min-width: 750px;
+}
+
+th, td {
+    border: 1px solid #cbd5e1;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+th {
+    background: #1e293b;
+    color: white;
+}
+
+.debit {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.credit {
+    color: #16a34a;
+    font-weight: bold;
+}
+
+.summary {
+    margin-top: 20px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+}
+
+.search-filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.search-box input {
+    width: 100%;
+    min-width: 250px;
+}
+
+.edit-btn {
+    background: #f59e0b;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.delete-btn {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.print-btn {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.excel-btn {
+    background: #0d9488;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.pdf-btn {
+    background: #e11d48;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.logout-btn {
+    background: #ef4444;
+    color: white;
+    float: right;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.login-body-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.auth-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+    max-width: 420px;
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-header {
+    margin-bottom: 25px;
+}
+
+.auth-header .logo-icon {
+    font-size: 45px;
+    margin-bottom: 10px;
+    display: inline-block;
+    background: #eff6ff;
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.auth-header h2 {
+    font-size: 24px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.auth-header p {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 5px;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+.input-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 15px 12px 42px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #f8fafc;
+    transition: all 0.3s;
+}
+
+.input-group input:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.input-group .input-icon {
+    position: absolute;
+    left: 14px;
+    top: 35px;
+    font-size: 16px;
+    color: #94a3b8;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 15px rgba(37, 99, 235, 0.3);
+    margin-top: 10px;
+}
+
+.auth-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.4);
+}
+
+.otp-box-style {
+    background: #f0f9ff;
+    border: 1px dashed #0284c7;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 18px;
+}
+
+.otp-msg {
+    font-size: 13px;
+    color: #0369a1;
+    line-height: 1.5;
+}
+
+.cancel-btn {
+    background: #e2e8f0;
+    color: #475569;
+    box-shadow: none;
+    margin-top: 10px;
+}
+
+.cancel-btn:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+    box-shadow: none;
+}
+
+.admin-panel {
+    background: #f8fafc;
+    border: 2px dashed #2563eb;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    overflow-x: auto;
+}
+
+.user-form-inline {
+    background: #e2e8f0;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.user-form-inline input, .user-form-inline select {
+    flex: 1;
+    min-width: 110px;
+}
+
+.db-status-bar {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #bae6fd;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.daily-stats-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 15px;
+    border-radius: 10px;
+    margin-top: 20px;
+}
+
+.daily-stats-table {
+    width: 100%;
+    min-width: auto;
+    margin-top: 10px;
+}
+
+.daily-stats-table th {
+    background: #475569;
+}
+
+.daily-stats-table td {
+    padding: 6px 10px;
+}
+
+@media (max-width: 768px) {
+    body {
+        margin: 0;
+        padding: 5px;
+    }
+    .auth-card {
+        padding: 30px 20px;
+        margin: 15px;
+    }
+    .box {
+        padding: 10px;
+    }
+    #input-form input, #input-form select, #input-form button {
+        flex: 100%;
+        width: 100%;
+        margin: 4px 0;
+    }
+    .search-filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-box input, .filter-box select {
+        width: 100%;
+    }
+}
+
+@media print {
+    body { background: white; padding: 0; }
+    .box, button, input, select, .search-filter-container, .admin-panel, .logout-btn, .db-status-bar, #input-form, th:last-child, td:last-child, .login-body-bg {
+        display: none !important;
+    }
+    #main-screen { display: block !important; }
+    #pdf-report-area { display: block !important; }
+    table { width: 100%; border: 1px solid #000; min-width: auto; }
+    th { background: #333 !important; color: white !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ১. স্টাইলিশ লগইন ফুলস্ক্রিন র‍্যাপার -->
+<div id="login-wrapper" class="login-body-bg">
+    
+    <!-- ক) লগইন কার্ড -->
+    <div id="login-screen" class="auth-card">
+        <div class="auth-header">
+            <span class="logo-icon">📊</span>
+            <h2>হিসাব খাতা সিস্টেমে প্রবেশ করুন</h2>
+            <p>আপনার অ্যাকাউন্ট ইউজার আইডি ও পাসওয়ার্ড দিন</p>
+        </div>
+        
+        <div class="input-group">
+            <label>ইউজার আইডি (Username)</label>
+            <span class="input-icon">👤</span>
+            <input type="text" id="username" placeholder="যেমন: admin বা customer1">
+        </div>
+
+        <div class="input-group">
+            <label>পাসওয়ার্ড (Password)</label>
+            <span class="input-icon">🔑</span>
+            <input type="password" id="password" placeholder="আপনার পাসওয়ার্ড দিন">
+        </div>
+
+        <button class="auth-btn" onclick="login()">লগইন করুন 🔓</button>
+    </div>
+
+    <!-- খ) OTP ভেরিফিকেশন কার্ড -->
+    <div id="otp-screen" class="auth-card" style="display: none;">
+        <div class="auth-header">
+            <span class="logo-icon">📩</span>
+            <h2>ইমেইল কোড ভেরিফিকেশন</h2>
+            <p>সিকিউরিটি লেয়ার যাচাইকরণ</p>
+        </div>
+
+        <div class="otp-box-style">
+            <p class="otp-msg">আপনার রেজিস্টার্ড ইমেইলে একটি <b>৬-ডিজিটের OTP কোড</b> পাঠানো হয়েছে। কোডটি নিচে লিখে ভেরিফাই করুন।</p>
+        </div>
+
+        <div class="input-group">
+            <label>OTP কোড</label>
+            <span class="input-icon">🔢</span>
+            <input type="text" id="otp-input" placeholder="৬ ডিজিটের কোড দিন" maxlength="6" style="text-align: center; font-size: 18px; letter-spacing: 4px;">
+        </div>
+
+        <button class="auth-btn" onclick="verifyOTP()">ভেরিফাই ও প্রবেশ করুন 🚀</button>
+        <button class="auth-btn cancel-btn" onclick="cancelOTP()">ফিরে যান ↩️</button>
+    </div>
+
+</div>
+
+<!-- ২. মেইন অ্যাপ্লিকেশন স্ক্রিন -->
+<div id="main-screen" style="display: none;">
+    <button class="logout-btn" onclick="logout()">🚪 লগআউট</button>
+    
+    <div id="pdf-report-area">
+        <h1 style="margin-bottom: 5px;">দৈনিক হিসাব খাতা</h1>
+        <div id="customer-profile-box" style="display:none; background: #e0f2fe; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <h2>👤 কাস্টমার প্রোফাইল ভিউ</h2>
+            <h3>নাম: <span id="cust-profile-name" style="color:#0284c7;">-</span></h3>
+            <p>ইউজার আইডি: <span id="cust-profile-id"></span> | মোবাইল: <span id="cust-profile-phone">-</span> | ঠিকানা: <span id="cust-profile-address">-</span> | ইমেইল: <span id="cust-profile-email">-</span></p>
+        </div>
+        <h4 id="user-role-display" style="text-align: center; color: #64748b; margin-bottom: 15px;">রোল: -</h4>
+    </div>
+
+    <!-- ফায়ারবেস কানেকশন স্ট্যাটাস বার -->
+    <div class="db-status-bar">
+        <span>🔥 ফায়ারবেস ক্লাউড স্ট্যাটাস: <strong id="db-status-text">কানেক্ট করা হচ্ছে...</strong></span>
+        <span id="sync-time-text" style="font-size: 11px; color: #0284c7;"></span>
+    </div>
+
+    <!-- 👑 অ্যাডমিন কন্ট্রোল প্যানেল 👑 -->
+    <div id="admin-controls" class="admin-panel" style="display: none;">
+        <h3 style="margin-top:0; color:#2563eb; text-align:left;" id="user-form-title">👥 ইউজার ম্যানেজমেন্ট কন্ট্রোল প্যানেল (Admin Only)</h3>
+        
+        <!-- নতুন ইউজার তৈরি ও এডিট করার ইনপুট ফর্ম -->
+        <div class="user-form-inline">
+            <strong id="user-form-heading">➕ নতুন আইডি:</strong>
+            <input type="text" id="new-username" placeholder="ইউজার আইডি">
+            <input type="text" id="new-password" placeholder="পাসওয়ার্ড">
+            <input type="email" id="new-email" placeholder="ইমেইল (OTP এর জন্য)">
+            <input type="text" id="new-custname" placeholder="নাম">
+            <input type="text" id="new-phone" placeholder="মোবাইল">
+            <input type="text" id="new-address" placeholder="ঠিকানা">
+            <select id="new-role">
+                <option value="admin">Admin</option>
+                <option value="subadmin">Sub Admin</option>
+                <option value="customer">Customer</option>
+            </select>
+            <button id="user-save-btn" onclick="createNewUser()" style="background:#2563eb; color:white; border:none; padding:10px 15px; flex:0 0 auto;">তৈরি করুন</button>
+            <button id="user-cancel-btn" onclick="cancelUserEdit()" style="background:#64748b; color:white; border:none; padding:10px 15px; flex:0 0 auto; display:none;">বাতিল</button>
+        </div>
+
+        <!-- সাব-অ্যাডমিন গ্লোবাল পারমিশন কন্ট্রোল বক্স -->
+        <div style="background:#fff; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #cbd5e1;">
+            <strong>⚙️ সাব-অ্যাডমিন পারমিশন:</strong><br>
+            <label style="margin-right:15px; font-weight:bold;"><input type="checkbox" id="perm-edit" onchange="updatePermissions()"> এডিট অনুমতি</label>
+            <label style="font-weight:bold; color:red;"><input type="checkbox" id="perm-delete" onchange="updatePermissions()"> ডিলিট অনুমতি</label>
+        </div>
+
+        <!-- রেজিস্টার্ড ইউজারদের তালিকা -->
+        <strong style="display:block; margin-bottom:5px;">📋 বর্তমান ইউজারদের তালিকা:</strong>
+        <div class="table-responsive">
+            <table style="margin-top:0; font-size:13px; background:white;">
+                <thead>
+                    <tr style="background:#475569;">
+                        <th>ইউজার আইডি</th>
+                        <th>রোল (Role)</th>
+                        <th>ইমেইল</th>
+                        <th>নাম</th>
+                        <th>মোবাইল</th>
+                        <th>ঠিকানা</th>
+                        <th>পাসওয়ার্ড</th>
+                        <th>অ্যাকশন</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 👤 কাস্টমার ফিল্টার ও পেজ নেভিগেশন ট্যাব -->
+    <div id="customer-tabs-container" style="margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" class="no-print">
+        <h4 style="text-align:left; margin-bottom: 8px; font-size:14px; color:#1e293b;">👤 কাস্টমার পেজ বেছে নিন (কাস্টমার খাতা):</h4>
+        <div id="customer-tabs-list" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+    </div>
+
+    <!-- মূল খাতার বক্স -->
+    <div class="box" id="printable-area">
+        <div id="input-form">
+            <span id="admin-select-wrapper" style="flex: 1; min-width: 200px;">
+                <select id="data-customer-select" onchange="onCustomerSelectChange()" style="width:100%;"><option value="">--সিলেক্ট কাস্টমার--</option></select>
+            </span>
+            <input type="date" id="date">
+            <input type="text" id="phone" placeholder="ফোন নম্বর">
+            <input type="text" id="address" placeholder="ঠিকানা">
+            <input type="text" id="trx-id" placeholder="Transaction ID">
+            <input type="text" id="details" placeholder="বিবরণ">
+            <input type="number" id="debit" placeholder="Debit (খরচ)">
+            <input type="number" id="credit" placeholder="Credit (জমা)">
+            <button onclick="saveData()" style="background:#2563eb; color:white; border:none; padding: 10px;">সেভ করুন</button>
+        </div>
+        
+        <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;" class="no-print">
+            <button class="print-btn" onclick="window.print()">🖨️ প্রিন্ট</button>
+            <button class="pdf-btn" onclick="downloadPDF()">📄 PDF ডাউনলোড</button>
+            <button class="excel-btn" onclick="downloadExcel()">📊 Excel</button>
+        </div>
+
+        <!-- সার্চ এবং ফিল্টার সেকশন -->
+        <div class="search-filter-container no-print">
+            <div class="search-box">
+                <input type="text" id="search" placeholder="🔍 নাম, ঠিকানা, নম্বর বা Trx ID খুঁজুন..." onkeyup="renderTable()">
+            </div>
+            <div class="filter-box" style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <select id="date-filter" onchange="toggleCustomDateInput()">
+                    <option value="all">📅 সব রেকর্ড</option>
+                    <option value="today">⏱️ আজকের দিন (১ দিন)</option>
+                    <option value="7days">⏱️ গত ৭ দিন</option>
+                    <option value="1month">⏱️ গত ১ মাস</option>
+                    <option value="1year">⏱️ গত ১ বছর</option>
+                    <option value="custom">📅 নির্দিষ্ট তারিখ (Custom)</option>
+                </select>
+
+                <!-- কাস্টম ১ দিন বা একাধিক দিনের রেঞ্জ বেছে নেওয়ার জন্য -->
+                <input type="date" id="custom-date-start" onchange="renderTable()" style="display:none;">
+                <input type="date" id="custom-date-end" onchange="renderTable()" style="display:none;" title="শেষ তারিখ (ঐচ্ছিক)">
+            </div>
+        </div>
+
+        <div id="statement-table-area" class="table-responsive">
+            <table id="account-table">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">ক্রমিক নং</th>
+                        <th id="th-customer-name">কাস্টমার নাম</th>
+                        <th>মোবাইল</th>
+                        <th>ঠিকানা</th>
+                        <th>তারিখ</th>
+                        <th>Trx ID</th>
+                        <th>বিবরণ</th>
+                        <th>Debit</th>
+                        <th>Credit</th>
+                        <th id="action-header">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+                <tfoot id="table-footer" style="font-weight: bold; background: #f8fafc;">
+                    <tr>
+                        <td colspan="7" style="text-align: right;">সর্বমোট:</td>
+                        <td id="foot-total-debit" style="color: red;">0</td>
+                        <td id="foot-total-credit" style="color: green;">0</td>
+                        <td id="foot-action-cell"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="summary">
+            <div class="card" style="border-top: 4px solid #dc2626;">
+                <h3>মোট Debit</h3>
+                <p id="totalDebit" style="font-size:18px; font-weight:bold; color:#dc2626;">0</p>
+            </div>
+            <div class="card" style="border-top: 4px solid #16a34a;">
+                <h3>মোট Credit</h3>
+                <p id="totalCredit" style="font-size:18px; font-weight:bold; color:#16a34a;">0</p>
+            </div>
+            <div class="card" style="border-top: 4px solid #2563eb; background:#f0fdf4;">
+                <h3>ব্যালেন্স</h3>
+                <p id="balance" style="font-size:20px; font-weight:bold; color:#2563eb;">0</p>
+            </div>
+        </div>
+
+        <!-- 🆕 তারিখ ভিত্তিক এন্ট্রি গণনার নতুন সেকশন -->
+        <div class="daily-stats-box no-print">
+            <h4 style="text-align: left; color: #0f172a;">📅 তারিখ অনুযায়ী এন্ট্রি গণনাকারী (কোন দিন কতটি নম্বর/ডাটা এড হয়েছে)</h4>
+            <div class="table-responsive">
+                <table class="daily-stats-table">
+                    <thead>
+                        <tr>
+                            <th>তারিখ</th>
+                            <th>মোট এন্ট্রি (সংখ্যা)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="daily-stats-tbody">
+                        <tr><td colspan="2">কোন ডাটা নেই</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 📧 EMAILJS CONFIGURATION SETUP
+// ==========================================
+(function(){
+    emailjs.init("YOUR_EMAILJS_PUBLIC_KEY"); 
+})();
+
+const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";   
+const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID"; 
+
+// ==========================================
+// 🔴 FIREBASE CONFIGURATION SETUP
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCmQjTSbivs8uVbk_l8wKottKMEHAwrYus",
+  authDomain: "my-debit-credit-4d96c.firebaseapp.com",
+  projectId: "my-debit-credit-4d96c",
+  storageBucket: "my-debit-credit-4d96c.firebasestorage.app",
+  messagingSenderId: "567070229527",
+  appId: "1:567070229527:web:b3a9acc8f5dcc76d19c852",
+  measurementId: "G-6N5HTQ0XCZ"
+};
+
+let db = null;
+let useFirebase = false;
+
+try {
+    if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        useFirebase = true;
+    }
+} catch (e) {
+    console.error("Firebase Initialization Error: ", e);
+}
+
+let records = JSON.parse(localStorage.getItem("accounts_v2")) || [];
+let subAdminPermissions = JSON.parse(localStorage.getItem("subadmin_perms_v2")) || { edit: false, delete: false };
+
+let defaultUsers = {
+    "myadmin": {password: "myadmin", role: "admin", custName: "প্রধান অ্যাডমিন", phone: "", address: "", email: "admin@example.com"}
+};
+
+let users = JSON.parse(localStorage.getItem("app_users_v3")) || defaultUsers;
+
+if (!users["myadmin"] || users["myadmin"].password !== "myadmin") {
+    users["myadmin"] = {password: "myadmin", role: "admin", custName: "প্রধান অ্যাডমিন", phone: "", address: "", email: "admin@example.com"};
+    localStorage.setItem("app_users_v3", JSON.stringify(users));
+}
+
+let currentUser = null;
+let pendingUser = null;
+let generatedOTP = null;
+let editIndex = -1;
+let editingUserId = null;
+
+function syncWithFirebase() {
+    const statusText = document.getElementById("db-status-text");
+    const syncTimeText = document.getElementById("sync-time-text");
+
+    if (!useFirebase || !db) {
+        if(statusText) statusText.innerHTML = "<span style='color:#d97706;'>অফলাইন (Local Storage)</span>";
+        return;
+    }
+
+    if(statusText) statusText.innerHTML = "<span style='color:#16a34a;'>অনলাইন (Connected 🟢)</span>";
+
+    db.collection("accounts").onSnapshot((snapshot) => {
+        records = [];
+        snapshot.forEach((doc) => {
+            records.push({ firestoreId: doc.id, ...doc.data() });
+        });
+        localStorage.setItem("accounts_v2", JSON.stringify(records));
+        renderTable();
+        if(syncTimeText) syncTimeText.innerText = "সিঙ্ক: " + new Date().toLocaleTimeString();
+    }, (error) => {
+        console.error("Firestore accounts error: ", error);
+        if(statusText) statusText.innerHTML = "<span style='color:#dc2626;'>রুলস বা কানেকশন ত্রুটি! (Rules Check করুন)</span>";
+    });
+
+    db.collection("users").onSnapshot((snapshot) => {
+        snapshot.forEach((doc) => {
+            users[doc.id] = doc.data();
+        });
+        localStorage.setItem("app_users_v3", JSON.stringify(users));
+        populateCustomerDropdown();
+        if(currentUser && currentUser.role === 'admin') renderUserList();
+    });
+
+    db.collection("settings").doc("subadmin_perms").onSnapshot((doc) => {
+        if (doc.exists) {
+            subAdminPermissions = doc.data();
+            localStorage.setItem("subadmin_perms_v2", JSON.stringify(subAdminPermissions));
+            setupRoleUI();
+            renderTable();
+        }
+    });
+}
+
+function login() {
+    const uName = document.getElementById("username").value.trim().toLowerCase();
+    const uPass = document.getElementById("password").value;
+
+    if(users[uName] && users[uName].password === uPass) {
+        let userRole = users[uName].role;
+
+        if (userRole === "admin") {
+            completeLogin(users[uName], uName);
+        } else {
+            if(!users[uName].email) {
+                alert("এই ইউজারের কোনো ইমেইল যুক্ত করা নেই! দয়া করে অ্যাডমিনের সাথে যোগাযোগ করুন।");
+                return;
+            }
+            
+            pendingUser = users[uName];
+            pendingUser.username = uName;
+            
+            generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            let templateParams = {
+                to_name: users[uName].custName || uName,
+                to_email: users[uName].email,
+                otp_code: generatedOTP
+            };
+
+            alert("আপনার ইমেইলে OTP কোড পাঠানো হচ্ছে, দয়া করে অপেক্ষা করুন...");
+
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    alert("আপনার ইমেইলে ৬ ডিজিটের OTP কোডটি সফলভাবে পাঠানো হয়েছে!");
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("otp-screen").style.display = "block";
+                }, function(error) {
+                    console.error("EmailJS Error:", error);
+                    alert("ইমেইল পাঠাতে সমস্যা হয়েছে! সাধারণ ডেমো মোডে OTP কোডটি হলো: " + generatedOTP);
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("otp-screen").style.display = "block";
+                });
+        }
+    } else {
+        alert("ভুল ইউজার আইডি অথবা পাসওয়ার্ড!");
+    }
+}
+
+function verifyOTP() {
+    const inputCode = document.getElementById("otp-input").value.trim();
+    if(inputCode === generatedOTP) {
+        alert("OTP সফলভাবে ভেরিফাই করা হয়েছে!");
+        document.getElementById("otp-screen").style.display = "none";
+        document.getElementById("otp-input").value = "";
+        completeLogin(pendingUser, pendingUser.username);
+        pendingUser = null;
+        generatedOTP = null;
+    } else {
+        alert("ভুল OTP কোড! আবার চেষ্টা করুন।");
+    }
+}
+
+function cancelOTP() {
+    pendingUser = null;
+    generatedOTP = null;
+    document.getElementById("otp-input").value = "";
+    document.getElementById("otp-screen").style.display = "none";
+    document.getElementById("login-screen").style.display = "block";
+}
+
+function completeLogin(userObj, uName) {
+    currentUser = userObj;
+    currentUser.username = uName;
+    
+    document.getElementById("login-wrapper").style.display = "none";
+    document.getElementById("main-screen").style.display = "block";
+    document.getElementById("user-role-display").innerText = "অ্যাকাউন্ট টাইপ: " + currentUser.role.toUpperCase();
+    
+    if(currentUser.role === 'customer') {
+        document.getElementById("customer-profile-box").style.display = "block";
+        document.getElementById("cust-profile-name").innerText = currentUser.custName || uName;
+        document.getElementById("cust-profile-id").innerText = uName;
+        document.getElementById("cust-profile-phone").innerText = currentUser.phone || "-";
+        document.getElementById("cust-profile-address").innerText = currentUser.address || "-";
+        document.getElementById("cust-profile-email").innerText = currentUser.email || "-";
+    } else {
+        document.getElementById("customer-profile-box").style.display = "none";
+    }
+
+    setupRoleUI();
+    populateCustomerDropdown();
+    renderTable();
+    if(currentUser.role === 'admin') renderUserList();
+    
+    syncWithFirebase();
+}
+
+function logout() {
+    currentUser = null;
+    document.getElementById("username").value = "";
+    document.getElementById("password").value = "";
+    document.getElementById("login-wrapper").style.display = "flex";
+    document.getElementById("login-screen").style.display = "block";
+    document.getElementById("otp-screen").style.display = "none";
+    document.getElementById("main-screen").style.display = "none";
+}
+
+function setupRoleUI() {
+    const inputForm = document.getElementById("input-form");
+    const adminControls = document.getElementById("admin-controls");
+    const adminSelectWrapper = document.getElementById("admin-select-wrapper");
+    
+    document.getElementById("perm-edit").checked = subAdminPermissions.edit || false;
+    document.getElementById("perm-delete").checked = subAdminPermissions.delete || false;
+
+    if(currentUser.role === "admin") {
+        inputForm.style.display = "flex";
+        adminControls.style.display = "block";
+        adminSelectWrapper.style.display = "block";
+    } else if(currentUser.role === "subadmin") {
+        inputForm.style.display = "flex";
+        adminControls.style.display = "none";
+        adminSelectWrapper.style.display = "block";
+    } else if(currentUser.role === "customer") {
+        inputForm.style.display = "none"; 
+        adminControls.style.display = "none";
+    }
+}
+
+function populateCustomerDropdown() {
+    const select = document.getElementById("data-customer-select");
+    const tabsList = document.getElementById("customer-tabs-list");
+    const tabsContainer = document.getElementById("customer-tabs-container");
+    
+    let currentSelection = select ? select.value : "";
+    if(select) {
+        select.innerHTML = '<option value="">--সব কাস্টমার (সকল পেজ)--</option>';
+    }
+
+    if(tabsList) {
+        let activeClassAll = !currentSelection ? "background:#2563eb; color:white;" : "background:#e2e8f0; color:#1e293b;";
+        tabsList.innerHTML = `<button onclick="switchCustomerPage('')" style="${activeClassAll} border:none; padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer;">📁 সব কাস্টমার (All)</button>`;
+    }
+
+    for(let u in users) {
+        if(users[u].role === 'customer') {
+            let nameDisplay = users[u].custName ? `${users[u].custName} (${u})` : u;
+            if(select) {
+                select.innerHTML += `<option value="${u}">${nameDisplay}</option>`;
+            }
+            if(tabsList) {
+                let isActive = (currentSelection === u);
+                let btnStyle = isActive ? "background:#2563eb; color:white;" : "background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;";
+                tabsList.innerHTML += `<button onclick="switchCustomerPage('${u}')" style="${btnStyle} padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer;">👤 ${users[u].custName || u}</button>`;
+            }
+        }
+    }
+
+    if(select) select.value = currentSelection;
+
+    if(currentUser && currentUser.role === 'customer') {
+        if(tabsContainer) tabsContainer.style.display = "none";
+    } else {
+        if(tabsContainer) tabsContainer.style.display = "block";
+    }
+}
+
+function switchCustomerPage(username) {
+    const select = document.getElementById("data-customer-select");
+    if(select) {
+        select.value = username;
+        onCustomerSelectChange();
+    }
+}
+
+function onCustomerSelectChange() {
+    const selectedUser = document.getElementById("data-customer-select").value;
+    if (selectedUser && users[selectedUser]) {
+        document.getElementById("phone").value = users[selectedUser].phone || "";
+        document.getElementById("address").value = users[selectedUser].address || "";
+    } else {
+        document.getElementById("phone").value = "";
+        document.getElementById("address").value = "";
+    }
+    renderTable();
+}
+
+function createNewUser() {
+    const newId = document.getElementById("new-username").value.trim().toLowerCase();
+    const newPass = document.getElementById("new-password").value.trim();
+    const newEmail = document.getElementById("new-email").value.trim();
+    const newRole = document.getElementById("new-role").value;
+    const newCustName = document.getElementById("new-custname").value.trim();
+    const newPhone = document.getElementById("new-phone").value.trim();
+    const newAddress = document.getElementById("new-address").value.trim();
+
+    if(!newId || !newPass || !newEmail) {
+        alert("ইউজার আইডি, পাসওয়ার্ড এবং ইমেইল সম্পূর্ণ লিখুন!");
+        return;
+    }
+    if(newRole === "customer" && !newCustName){
+        alert("কাস্টমারের পূর্ণ নাম দিন!");
+        return;
+    }
+
+    if(!editingUserId && users[newId]) {
+        alert("এই ইউজার আইডিটি ইতিমধ্যে রেজিস্টার্ড আছে!");
+        return;
+    }
+
+    const userObj = { password: newPass, email: newEmail, role: newRole, custName: newCustName || newId, phone: newPhone, address: newAddress };
+    
+    if(editingUserId) {
+        if(editingUserId !== newId) {
+            delete users[editingUserId];
+            if(useFirebase && db) {
+                db.collection("users").doc(editingUserId).delete();
+            }
+        }
+        users[newId] = userObj;
+        alert("ইউজারের তথ্য আপডেট করা হয়েছে।");
+    } else {
+        users[newId] = userObj;
+        alert("নতুন অ্যাকাউন্ট তৈরি হয়েছে।");
+    }
+
+    localStorage.setItem("app_users_v3", JSON.stringify(users));
+    
+    if(useFirebase && db) {
+        db.collection("users").doc(newId).set(userObj);
+    }
+
+    resetUserForm();
+    renderUserList();
+    populateCustomerDropdown();
+}
+
+function editUser(uName) {
+    if(!users[uName]) return;
+    editingUserId = uName;
+    const u = users[uName];
+
+    document.getElementById("new-username").value = uName;
+    document.getElementById("new-password").value = u.password || "";
+    document.getElementById("new-email").value = u.email || "";
+    document.getElementById("new-custname").value = u.custName || "";
+    document.getElementById("new-phone").value = u.phone || "";
+    document.getElementById("new-address").value = u.address || "";
+    document.getElementById("new-role").value = u.role || "customer";
+
+    document.getElementById("user-form-heading").innerText = "✏️ ইউজার তথ্য সংশোধন:";
+    document.getElementById("user-save-btn").innerText = "আপডেট করুন 💾";
+    document.getElementById("user-save-btn").style.background = "#f59e0b";
+    document.getElementById("user-cancel-btn").style.display = "inline-block";
+}
+
+function cancelUserEdit() {
+    resetUserForm();
+}
+
+function resetUserForm() {
+    editingUserId = null;
+    document.getElementById("new-username").value = "";
+    document.getElementById("new-password").value = "";
+    document.getElementById("new-email").value = "";
+    document.getElementById("new-custname").value = "";
+    document.getElementById("new-phone").value = "";
+    document.getElementById("new-address").value = "";
+    document.getElementById("new-role").value = "subadmin";
+
+    document.getElementById("user-form-heading").innerText = "➕ নতুন আইডি:";
+    document.getElementById("user-save-btn").innerText = "তৈরি করুন";
+    document.getElementById("user-save-btn").style.background = "#2563eb";
+    document.getElementById("user-cancel-btn").style.display = "none";
+}
+
+function renderUserList() {
+    const tbody = document.getElementById("user-list-tbody");
+    tbody.innerHTML = "";
+    
+    for(let u in users) {
+        // 🌟 অ্যাডমিনসহ সকল ইউজারের তালিকা প্রদর্শন করার জন্য ফিল্টার তুলে দেওয়া হয়েছে[cite: 7]
+        let roleColor = users[u].role === 'admin' ? 'red' : (users[u].role === 'subadmin' ? 'orange' : 'blue');
+        
+        tbody.innerHTML += `<tr>
+            <td><strong>${u}</strong></td>
+            <td><span style="color:${roleColor}; font-weight:bold;">${users[u].role.toUpperCase()}</span></td>
+            <td>${users[u].email || '-'}</td>
+            <td>${users[u].custName || '-'}</td>
+            <td>${users[u].phone || '-'}</td>
+            <td>${users[u].address || '-'}</td>
+            <td><code>${users[u].password}</code></td>
+            <td>
+                <button onclick="editUser('${u}')" style="background:#f59e0b; color:white; border:none; padding:2px 8px; border-radius:3px; margin-right:4px;">Edit</button>
+                <button onclick="deleteUser('${u}')" style="background:red; color:white; border:none; padding:2px 8px; border-radius:3px;">Delete</button>
+            </td>
+        </tr>`;
+    }
+}
+
+function deleteUser(uName) {
+    if(confirm("আপনি কি '" + uName + "' আইডিটি ডিলিট করতে চান?")) {
+        delete users[uName];
+        localStorage.setItem("app_users_v3", JSON.stringify(users));
+        if(useFirebase && db) {
+            db.collection("users").doc(uName).delete();
+        }
+        if(editingUserId === uName) resetUserForm();
+        renderUserList();
+        populateCustomerDropdown();
+    }
+}
+
+function updatePermissions() {
+    subAdminPermissions.edit = document.getElementById("perm-edit").checked;
+    subAdminPermissions.delete = document.getElementById("perm-delete").checked;
+    localStorage.setItem("subadmin_perms_v2", JSON.stringify(subAdminPermissions));
+    
+    if(useFirebase && db) {
+        db.collection("settings").doc("subadmin_perms").set(subAdminPermissions);
+    }
+    renderTable(); 
+}
+
+function saveData(){
+    const custSelect = document.getElementById("data-customer-select").value;
+    const date = document.getElementById("date").value;
+    const phone = document.getElementById("phone").value;
+    const address = document.getElementById("address").value;
+    const trxId = document.getElementById("trx-id").value;
+    const details = document.getElementById("details").value;
+    const debit = Number(document.getElementById("debit").value)||0;
+    const credit = Number(document.getElementById("credit").value)||0;
+
+    if((currentUser.role === 'admin' || currentUser.role === 'subadmin') && !custSelect) {
+        alert("দয়া করে একজন কাস্টমার সিলেক্ট করুন");
+        return;
+    }
+    if(!date || !details){
+        alert("তারিখ ও বিবরণ দিন");
+        return;
+    }
+
+    const data = { customer: custSelect, date, phone, address, trxId, details, debit, credit };
+
+    if(editIndex === -1){
+        records.push(data);
+        if(useFirebase && db) {
+            db.collection("accounts").add(data);
+        }
+    } else {
+        if(currentUser.role === "subadmin" && !subAdminPermissions.edit) {
+            alert("আপনার এডিট করার পারমিশন নেই!");
+            clearForm();
+            editIndex = -1;
+            return;
+        }
+        let oldRecord = records[editIndex];
+        records[editIndex] = data;
+        if(useFirebase && db && oldRecord.firestoreId) {
+            db.collection("accounts").doc(oldRecord.firestoreId).update(data);
+        }
+        editIndex = -1;
+    }
+
+    localStorage.setItem("accounts_v2", JSON.stringify(records));
+    clearForm();
+    renderTable();
+}
+
+function toggleCustomDateInput() {
+    const filterValue = document.getElementById("date-filter").value;
+    const startInput = document.getElementById("custom-date-start");
+    const endInput = document.getElementById("custom-date-end");
+
+    if (filterValue === "custom") {
+        startInput.style.display = "inline-block";
+        endInput.style.display = "inline-block";
+    } else {
+        startInput.style.display = "none";
+        endInput.style.display = "none";
+        startInput.value = "";
+        endInput.value = "";
+    }
+    renderTable();
+}
+
+function renderDailyStats(visibleRecords) {
+    const statsTbody = document.getElementById("daily-stats-tbody");
+    if(!statsTbody) return;
+
+    let countsByDate = {};
+
+    visibleRecords.forEach(item => {
+        let d = item.date || 'অনির্দিষ্ট';
+        countsByDate[d] = (countsByDate[d] || 0) + 1;
+    });
+
+    let dates = Object.keys(countsByDate).sort().reverse();
+
+    if(dates.length === 0) {
+        statsTbody.innerHTML = `<tr><td colspan="2">কোন ডাটা নেই</td></tr>`;
+        return;
+    }
+
+    statsTbody.innerHTML = "";
+    dates.forEach(d => {
+        statsTbody.innerHTML += `
+            <tr>
+                <td><strong>${d}</strong></td>
+                <td><span style="color:#2563eb; font-weight:bold;">${countsByDate[d]} টি</span></td>
+            </tr>
+        `;
+    });
+}
+
+function renderTable(){
+    const tbody = document.getElementById("tbody");
+    const search = document.getElementById("search").value.toLowerCase().trim();
+    const filterValue = document.getElementById("date-filter").value;
+    const customStart = document.getElementById("custom-date-start").value;
+    const customEnd = document.getElementById("custom-date-end").value;
+    const actionHeader = document.getElementById("action-header");
+    const thCustomerName = document.getElementById("th-customer-name");
+    const selectedAdminCustomer = document.getElementById("data-customer-select").value;
+
+    tbody.innerHTML = "";
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    records.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const todayObj = new Date();
+    const yyyy = todayObj.getFullYear();
+    const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(todayObj.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    let targetDate = new Date();
+
+    if(filterValue === "7days") {
+        targetDate.setDate(todayObj.getDate() - 7);
+    } else if(filterValue === "1month") {
+        targetDate.setMonth(todayObj.getMonth() - 1);
+    } else if(filterValue === "1year") {
+        targetDate.setFullYear(todayObj.getFullYear() - 1);
+    }
+
+    let showActionColumn = (currentUser.role !== "customer");
+    actionHeader.style.display = showActionColumn ? "table-cell" : "none";
+    thCustomerName.style.display = (currentUser.role === "customer") ? "none" : "table-cell";
+
+    let visibleRecords = [];
+    let slNo = 1;
+
+    records.forEach((item, index)=>{
+        let passDateFilter = false;
+
+        if (filterValue === "all") {
+            passDateFilter = true;
+        } else if (filterValue === "today") {
+            passDateFilter = (item.date === todayStr);
+        } else if (filterValue === "custom") {
+            if (customStart && !customEnd) {
+                passDateFilter = (item.date === customStart);
+            } else if (customStart && customEnd) {
+                passDateFilter = (item.date >= customStart && item.date <= customEnd);
+            } else {
+                passDateFilter = true;
+            }
+        } else {
+            const itemDate = new Date(item.date);
+            passDateFilter = (itemDate >= targetDate);
+        }
+
+        let passCustomerFilter = false;
+        if(currentUser.role === "customer") {
+            if(item.customer === currentUser.username) {
+                passCustomerFilter = true;
+            }
+        } else {
+            if(!selectedAdminCustomer || item.customer === selectedAdminCustomer) {
+                passCustomerFilter = true;
+            }
+        }
+
+        let custObject = users[item.customer] || {};
+        let custFullName = custObject.custName || item.customer || 'Unknown';
+        let itemPhone = item.phone || custObject.phone || '';
+        let itemAddress = item.address || custObject.address || '';
+        let itemTrx = item.trxId || '';
+
+        let matchesSearch = search === "" ||
+            custFullName.toLowerCase().includes(search) ||
+            (item.customer && item.customer.toLowerCase().includes(search)) ||
+            itemPhone.toLowerCase().includes(search) ||
+            itemAddress.toLowerCase().includes(search) ||
+            itemTrx.toLowerCase().includes(search) ||
+            item.details.toLowerCase().includes(search) ||
+            item.date.includes(search);
+
+        if(passDateFilter && passCustomerFilter && matchesSearch) {
+            visibleRecords.push(item);
+            totalDebit += item.debit;
+            totalCredit += item.credit;
+
+            let actionButtons = "";
+            if(currentUser.role === "admin") {
+                actionButtons = `
+                    <button class="edit-btn" onclick="editData(${index})">Edit</button>
+                    <button class="delete-btn" onclick="deleteData(${index})">Delete</button>
+                `;
+            } else if(currentUser.role === "subadmin") {
+                let eBtn = subAdminPermissions.edit ? `<button class="edit-btn" onclick="editData(${index})">Edit</button>` : '';
+                let dBtn = subAdminPermissions.delete ? `<button class="delete-btn" onclick="deleteData(${index})">Delete</button>` : '';
+                actionButtons = (eBtn || dBtn) ? (eBtn + " " + dBtn) : "-";
+            }
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${slNo++}</strong></td>
+                    ${currentUser.role !== "customer" ? `<td><strong>${custFullName}</strong></td>` : ''}
+                    <td>${itemPhone}</td>
+                    <td>${itemAddress}</td>
+                    <td>${item.date}</td>
+                    <td><code>${itemTrx}</code></td>
+                    <td>${item.details}</td>
+                    <td class="debit">${item.debit}</td>
+                    <td class="credit">${item.credit}</td>
+                    ${showActionColumn ? `<td>${actionButtons}</td>` : ''}
+                </tr>
+            `;
+        }
+    });
+
+    document.getElementById("totalDebit").innerText = totalDebit;
+    document.getElementById("totalCredit").innerText = totalCredit;
+    document.getElementById("balance").innerText = totalCredit - totalDebit;
+
+    document.getElementById("foot-total-debit").innerText = totalDebit;
+    document.getElementById("foot-total-credit").innerText = totalCredit;
+    document.getElementById("foot-action-cell").style.display = showActionColumn ? "table-cell" : "none";
+
+    renderDailyStats(visibleRecords);
+}
+
+function editData(index){
+    if(currentUser.role === "subadmin" && !subAdminPermissions.edit) {
+        alert("আপনার এডিট করার পারমিশন নেই!");
+        return;
+    }
+    document.getElementById("data-customer-select").value = records[index].customer || "";
+    document.getElementById("date").value = records[index].date || "";
+    document.getElementById("phone").value = records[index].phone || "";
+    document.getElementById("address").value = records[index].address || "";
+    document.getElementById("trx-id").value = records[index].trxId || "";
+    document.getElementById("details").value = records[index].details || "";
+    document.getElementById("debit").value = records[index].debit || 0;
+    document.getElementById("credit").value = records[index].credit || 0;
+    editIndex = index;
+}
+
+function deleteData(index){
+    if(currentUser.role === "subadmin" && !subAdminPermissions.delete) {
+        alert("আপনার ডিলিট করার পারমিশন নেই!");
+        return;
+    }
+    if(confirm("আপনি কি রেকর্ডটি ডিলিট করতে চান?")){
+        let targetDoc = records[index];
+        records.splice(index,1);
+        localStorage.setItem("accounts_v2", JSON.stringify(records));
+        
+        if(useFirebase && db && targetDoc.firestoreId) {
+            db.collection("accounts").doc(targetDoc.firestoreId).delete();
+        }
+        renderTable();
+    }
+}
+
+function clearForm(){
+    document.getElementById("data-customer-select").value="";
+    document.getElementById("date").value="";
+    document.getElementById("phone").value="";
+    document.getElementById("address").value="";
+    document.getElementById("trx-id").value="";
+    document.getElementById("details").value="";
+    document.getElementById("debit").value="";
+    document.getElementById("credit").value="";
+}
+
+function downloadExcel() {
+    let table = document.getElementById("account-table");
+    let wb = XLSX.utils.table_to_book(table, {sheet: "Statement"});
+    XLSX.writeFile(wb, "Account_Statement.xlsx");
+}
+
+function downloadPDF() {
+    let element = document.getElementById("printable-area");
+    let opt = {
+        margin:       [0.2, 0.2, 0.2, 0.2],
+        filename:     'Account_Statement.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false, windowWidth: 1200 },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+    };
+    
+    if (typeof html2pdf !== 'undefined') {
+        html2pdf().set(opt).from(element).save().catch(err => {
+            console.error("PDF generation error, switching to print:", err);
+            window.print();
+        });
+    } else {
+        window.print();
+    }
+}
+</script>
+
+</body>
+</html>
