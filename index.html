@@ -1,1 +1,2235 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>হিসাব খাতা - অ্যাডভান্সড, ফায়ারবেস ও EmailJS OTP সংস্করণ</title>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- EmailJS SDK -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+<!-- Export Libraries: SheetJS (Excel) & html2pdf (PDF) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #eef2f3;
+    color: #333;
+    padding: 10px;
+}
+
+#main-screen {
+    max-width: 1200px;
+    margin: 10px auto;
+}
+
+h1, h2, h3, h4 {
+    text-align: center;
+    color: #1e293b;
+}
+
+.box {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,.05);
+    margin-bottom: 20px;
+}
+
+/* আকর্ষণীয় কাস্টমার প্রোফাইল কার্ড ডিজাইন */
+.profile-card {
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+    border: 1px solid #bfdbfe;
+    border-left: 6px solid #2563eb;
+    padding: 18px 20px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+    text-align: left;
+}
+
+.profile-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #dbeafe;
+}
+
+.profile-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    overflow: hidden;
+    border: 2px solid #ffffff;
+    flex-shrink: 0;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.user-table-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid #cbd5e1;
+    vertical-align: middle;
+    cursor: pointer;
+}
+
+.profile-name-text {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    text-align: left;
+}
+
+.profile-badge {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.profile-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px;
+}
+
+.profile-meta-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #334155;
+}
+
+.profile-meta-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.profile-meta-value {
+    font-weight: 700;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+/* ডকুমেন্ট তালিকা ও চিপ স্টাইল */
+.profile-docs-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #bfdbfe;
+}
+
+.doc-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
+    align-items: center;
+}
+
+.doc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #93c5fd;
+    color: #1d4ed8;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.doc-chip:hover {
+    background: #2563eb;
+    color: #ffffff;
+}
+
+.doc-remove-x {
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    margin-left: 4px;
+}
+
+.file-upload-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1.5px dashed #3b82f6;
+    color: #1e40af;
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex: 1;
+    min-width: 170px;
+}
+
+.file-upload-label:hover {
+    background: #e0f2fe;
+}
+
+/* ফর্ম ও ইনপুট রেসপন্সিভ ডিজাইন */
+#input-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+input, button, select {
+    padding: 10px 12px;
+    margin: 4px 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+}
+
+input:focus, select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+#input-form input, #input-form select {
+    flex: 1;
+    min-width: 130px;
+}
+
+#input-form button.save-entry-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    flex: 0 0 auto;
+    width: 100%;
+}
+
+button {
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease-in-out;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+/* টেবিল রেসপন্সিভ স্ক্রোল */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 15px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    min-width: 880px;
+}
+
+th, td {
+    border: 1px solid #cbd5e1;
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+th {
+    background: #1e293b;
+    color: white;
+}
+
+.debit {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.credit {
+    color: #16a34a;
+    font-weight: bold;
+}
+
+.summary {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+    flex: 1;
+    min-width: 150px;
+    text-align: center;
+}
+
+.search-filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.search-box input {
+    width: 100%;
+    min-width: 250px;
+}
+
+.edit-btn {
+    background: #f59e0b;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.delete-btn {
+    background: #ef4444;
+    border: none;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.view-doc-btn {
+    background: #0284c7;
+    border: none;
+    color: white;
+    padding: 4px 9px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.print-btn {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.excel-btn {
+    background: #0d9488;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.pdf-btn {
+    background: #e11d48;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+}
+
+.logout-btn {
+    background: #ef4444;
+    color: white;
+    float: right;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+/* আলাদা অ্যাডমিন ও লেজার নেভিগেশন বার */
+.top-nav-bar {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 15px;
+    background: #fff;
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    flex-wrap: wrap;
+}
+
+.nav-tab-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #e2e8f0;
+    color: #1e293b;
+}
+
+.nav-tab-btn.active {
+    background: #2563eb;
+    color: white;
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.login-body-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.auth-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 100%;
+    max-width: 420px;
+    padding: 40px 30px;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-header {
+    margin-bottom: 25px;
+}
+
+.auth-header .logo-icon {
+    font-size: 45px;
+    margin-bottom: 10px;
+    display: inline-block;
+    background: #eff6ff;
+    width: 80px;
+    height: 80px;
+    line-height: 80px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.auth-header h2 {
+    font-size: 24px;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.auth-header p {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 5px;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+.input-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 15px 12px 42px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    font-size: 14px;
+    background: #f8fafc;
+    transition: all 0.3s;
+}
+
+.input-group input:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.input-group .input-icon {
+    position: absolute;
+    left: 14px;
+    top: 35px;
+    font-size: 16px;
+    color: #94a3b8;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 15px rgba(37, 99, 235, 0.3);
+    margin-top: 10px;
+}
+
+.auth-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.4);
+}
+
+.otp-box-style {
+    background: #f0f9ff;
+    border: 1px dashed #0284c7;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 18px;
+}
+
+.otp-msg {
+    font-size: 13px;
+    color: #0369a1;
+    line-height: 1.5;
+}
+
+.cancel-btn {
+    background: #e2e8f0;
+    color: #475569;
+    box-shadow: none;
+    margin-top: 10px;
+}
+
+.cancel-btn:hover {
+    background: #cbd5e1;
+    color: #1e293b;
+    box-shadow: none;
+}
+
+.admin-panel {
+    background: #ffffff;
+    border: 2px solid #2563eb;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,.05);
+    overflow-x: auto;
+}
+
+.user-form-inline {
+    background: #f1f5f9;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.user-form-inline input, .user-form-inline select {
+    flex: 1;
+    min-width: 110px;
+}
+
+.db-status-bar {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #bae6fd;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.daily-stats-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 12px 15px;
+    border-radius: 10px;
+    margin-top: 15px;
+    margin-bottom: 15px;
+}
+
+.daily-stats-table {
+    width: 100%;
+    min-width: auto;
+    margin-top: 10px;
+}
+
+.daily-stats-table th {
+    background: #475569;
+}
+
+.daily-stats-table td {
+    padding: 6px 10px;
+}
+
+/* ডকুমেন্ট প্রিভিউ মডাল */
+.doc-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.78);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    padding: 15px;
+}
+
+.doc-modal-card {
+    background: #ffffff;
+    border-radius: 14px;
+    max-width: 820px;
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+}
+
+.doc-modal-header {
+    padding: 12px 16px;
+    background: #1e293b;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.doc-modal-body {
+    padding: 15px;
+    overflow: auto;
+    text-align: center;
+    background: #f8fafc;
+    flex: 1;
+}
+
+.doc-modal-body img {
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.doc-modal-body iframe {
+    width: 100%;
+    height: 70vh;
+    border: none;
+    border-radius: 8px;
+}
+
+/* PDF এক্সপোর্ট চলাকালীন ইনপুট ফর্ম ও অপ্রয়োজনীয় অংশ লুকানো এবং প্রোফাইল ও টেবিল দেখানো */
+.pdf-exporting #input-form,
+.pdf-exporting .no-print,
+.pdf-exporting #action-header,
+.pdf-exporting #foot-action-cell,
+.pdf-exporting td:last-child:not([colspan]) {
+    display: none !important;
+}
+
+.pdf-exporting #pdf-customer-profile {
+    display: block !important;
+}
+
+.pdf-exporting th,
+.pdf-exporting td {
+    white-space: normal !important;
+    word-break: break-word;
+    font-size: 12px !important;
+    padding: 6px !important;
+}
+
+@media (max-width: 768px) {
+    body {
+        margin: 0;
+        padding: 5px;
+    }
+    .auth-card {
+        padding: 30px 20px;
+        margin: 15px;
+    }
+    .box {
+        padding: 10px;
+    }
+    #input-form input, #input-form select, #input-form button.save-entry-btn, .file-upload-label {
+        flex: 100%;
+        width: 100%;
+        margin: 4px 0;
+    }
+    .search-filter-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .search-box input, .filter-box select {
+        width: 100%;
+    }
+}
+
+@media print {
+    body { background: white; padding: 0; }
+    .box, button, input, select, .search-filter-container, .admin-panel, .top-nav-bar, .logout-btn, .db-status-bar, #input-form, .no-print, th:last-child, td:last-child, .login-body-bg {
+        display: none !important;
+    }
+    #main-screen { display: block !important; }
+    #ledger-page-view { display: block !important; }
+    #printable-area { display: block !important; box-shadow: none !important; padding: 0 !important; }
+    #pdf-report-area { display: block !important; }
+    #pdf-customer-profile { display: block !important; }
+    table { width: 100%; border: 1px solid #000; min-width: auto; }
+    th { background: #333 !important; color: white !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ডকুমেন্ট প্রিভিউ ও ডাউনলোড মডাল -->
+<div id="doc-preview-modal" class="doc-modal-overlay" onclick="if(event.target===this) closeDocModal()">
+    <div class="doc-modal-card">
+        <div class="doc-modal-header">
+            <span id="doc-modal-title" style="font-weight:bold; font-size:14px;">📄 ডকুমেন্ট প্রিভিউ</span>
+            <div style="display:flex; gap:8px;">
+                <a id="doc-modal-download" href="#" download="document" style="background:#16a34a; color:white; text-decoration:none; padding:6px 12px; border-radius:6px; font-size:13px; font-weight:bold;">⬇️ ডাউনলোড</a>
+                <button onclick="closeDocModal()" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-size:13px;">✕ বন্ধ করুন</button>
+            </div>
+        </div>
+        <div id="doc-modal-body" class="doc-modal-body"></div>
+    </div>
+</div>
+
+<!-- ১. স্টাইলিশ লগইন ফুলস্ক্রিন র‍্যাপার -->
+<div id="login-wrapper" class="login-body-bg">
+    
+    <!-- ক) লগইন কার্ড -->
+    <div id="login-screen" class="auth-card">
+        <div class="auth-header">
+            <span class="logo-icon">📊</span>
+            <h2>হিসাব খাতা সিস্টেমে প্রবেশ করুন</h2>
+            <p>আপনার অ্যাকাউন্ট ইউজার আইডি ও পাসওয়ার্ড দিন</p>
+        </div>
+        
+        <div class="input-group">
+            <label>ইউজার আইডি (Username)</label>
+            <span class="input-icon">👤</span>
+            <input type="text" id="username" placeholder="যেমন: admin বা customer1">
+        </div>
+
+        <div class="input-group">
+            <label>পাসওয়ার্ড (Password)</label>
+            <span class="input-icon">🔑</span>
+            <input type="password" id="password" placeholder="আপনার পাসওয়ার্ড দিন">
+        </div>
+
+        <button class="auth-btn" onclick="login()">লগইন করুন 🔓</button>
+    </div>
+
+    <!-- খ) OTP ভেরিফিকেশন কার্ড -->
+    <div id="otp-screen" class="auth-card" style="display: none;">
+        <div class="auth-header">
+            <span class="logo-icon">📩</span>
+            <h2>ইমেইল কোড ভেরিফিকেশন</h2>
+            <p>সিকিউরিটি লেয়ার যাচাইকরণ</p>
+        </div>
+
+        <div class="otp-box-style">
+            <p class="otp-msg">আপনার রেজিস্টার্ড ইমেইলে একটি <b>৬-ডিজিটের OTP কোড</b> পাঠানো হয়েছে। কোডটি নিচে লিখে ভেরিফাই করুন।</p>
+        </div>
+
+        <div class="input-group">
+            <label>OTP কোড</label>
+            <span class="input-icon">🔢</span>
+            <input type="text" id="otp-input" placeholder="৬ ডিজিটের কোড দিন" maxlength="6" style="text-align: center; font-size: 18px; letter-spacing: 4px;">
+        </div>
+
+        <button class="auth-btn" onclick="verifyOTP()">ভেরিফাই ও প্রবেশ করুন 🚀</button>
+        <button class="auth-btn cancel-btn" onclick="cancelOTP()">ফিরে যান ↩️</button>
+    </div>
+
+</div>
+
+<!-- ২. মেইন অ্যাপ্লিকেশন স্ক্রিন -->
+<div id="main-screen" style="display: none;">
+    <button class="logout-btn" onclick="logout()">🚪 লগআউট</button>
+    
+    <div id="pdf-report-area">
+        <h1 style="margin-bottom: 5px;">দৈনিক হিসাব খাতা</h1>
+        <h4 id="user-role-display" style="text-align: center; color: #64748b; margin-bottom: 15px;">রোল: -</h4>
+    </div>
+
+    <!-- ফায়ারবেস কানেকশন স্ট্যাটাস বার -->
+    <div class="db-status-bar">
+        <span>🔥 ফায়ারবেস ক্লাউড স্ট্যাটাস: <strong id="db-status-text">কানেক্ট করা হচ্ছে...</strong></span>
+        <span id="sync-time-text" style="font-size: 11px; color: #0284c7;"></span>
+    </div>
+
+    <!-- 🧭 আলাদা পেজ নেভিগেশন বার (শুধুমাত্র Admin এর জন্য দৃশ্যমান) -->
+    <div id="admin-nav-bar" class="top-nav-bar no-print" style="display: none;">
+        <button id="btn-tab-ledger" class="nav-tab-btn active" onclick="switchMainPage('ledger')">📊 হিসাব খাতা ড্যাশবোর্ড</button>
+        <button id="btn-tab-admin" class="nav-tab-btn" onclick="switchMainPage('admin')">👑 অ্যাডমিন পেজ (ইউজার ও পারমিশন)</button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- পেজ ১: 👑 আলাদা অ্যাডমিন কন্ট্রোল প্যানেল পেজ -->
+    <!-- ========================================== -->
+    <div id="admin-page-view" class="admin-panel" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+            <h3 style="margin:0; color:#2563eb; text-align:left;" id="user-form-title">👑 অ্যাডমিন কন্ট্রোল প্যানেল (Admin Page)</h3>
+            <button onclick="switchMainPage('ledger')" style="background:#1e293b; color:white; border:none; padding:8px 14px; border-radius:6px;">⬅️ হিসাব খাতায় ফিরে যান</button>
+        </div>
+        
+        <!-- নতুন ইউজার তৈরি ও এডিট করার ইনপুট ফর্ম -->
+        <div class="user-form-inline">
+            <strong id="user-form-heading">➕ নতুন আইডি:</strong>
+            <input type="text" id="new-username" placeholder="ইউজার আইডি">
+            <input type="text" id="new-password" placeholder="পাসওয়ার্ড">
+            <input type="email" id="new-email" placeholder="ইমেইল (OTP এর জন্য)">
+            <input type="text" id="new-custname" placeholder="নাম">
+            <input type="text" id="new-phone" placeholder="মোবাইল">
+            <input type="text" id="new-address" placeholder="ঠিকানা">
+            <select id="new-role">
+                <option value="admin">Admin</option>
+                <option value="subadmin">Sub Admin</option>
+                <option value="customer">Customer</option>
+            </select>
+            <label class="file-upload-label" title="কাস্টমারের প্রোফাইল ছবি যুক্ত করুন">
+                🖼️ <span id="user-photo-label-text">প্রোফাইল ছবি</span>
+                <input type="file" id="new-user-photo" accept="image/*" onchange="handleUserPhotoSelect(event)" style="display:none;">
+            </label>
+            <label class="file-upload-label" title="কাস্টমারের কাগজ বা দলিল সংযুক্ত করুন">
+                📎 কাগজ/দলিল যুক্ত করুন
+                <input type="file" id="new-user-docs" accept="image/*,.pdf" multiple onchange="handleUserDocSelect(event)" style="display:none;">
+            </label>
+            <button id="user-save-btn" onclick="createNewUser()" style="background:#2563eb; color:white; border:none; padding:10px 15px; flex:0 0 auto;">তৈরি করুন</button>
+            <button id="user-cancel-btn" onclick="cancelUserEdit()" style="background:#64748b; color:white; border:none; padding:10px 15px; flex:0 0 auto; display:none;">বাতিল</button>
+            <div id="user-pending-photo-preview" class="doc-chip-list" style="width:100%;"></div>
+            <div id="user-pending-docs-preview" class="doc-chip-list" style="width:100%;"></div>
+        </div>
+
+        <!-- সাব-অ্যাডমিন গ্লোবাল পারমিশন কন্ট্রোল বক্স -->
+        <div style="background:#f8fafc; padding:12px; border-radius:6px; margin-bottom:15px; border:1px solid #cbd5e1;">
+            <strong>⚙️ সাব-অ্যাডমিন পারমিশন:</strong><br>
+            <label style="margin-right:15px; font-weight:bold;"><input type="checkbox" id="perm-edit" onchange="updatePermissions()"> এডিট অনুমতি</label>
+            <label style="font-weight:bold; color:red;"><input type="checkbox" id="perm-delete" onchange="updatePermissions()"> ডিলিট অনুমতি</label>
+        </div>
+
+        <!-- রেজিস্টার্ড ইউজারদের তালিকা -->
+        <strong style="display:block; margin-bottom:5px;">📋 বর্তমান ইউজারদের তালিকা:</strong>
+        <div class="table-responsive">
+            <table style="margin-top:0; font-size:13px; background:white;">
+                <thead>
+                    <tr style="background:#475569;">
+                        <th>ছবি</th>
+                        <th>ইউজার আইডি</th>
+                        <th>রোল (Role)</th>
+                        <th>ইমেইল</th>
+                        <th>নাম</th>
+                        <th>মোবাইল</th>
+                        <th>ঠিকানা</th>
+                        <th>দলিল/কাগজ</th>
+                        <th>পাসওয়ার্ড</th>
+                        <th>অ্যাকশন</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- পেজ ২: 📊 মূল হিসাব খাতা ড্যাশবোর্ড পেজ       -->
+    <!-- ========================================== -->
+    <div id="ledger-page-view">
+        <!-- 👤 কাস্টমার ফিল্টার ও পেজ নেভিগেশন ট্যাব -->
+        <div id="customer-tabs-container" style="margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" class="no-print">
+            <h4 style="text-align:left; margin-bottom: 8px; font-size:14px; color:#1e293b;">👤 কাস্টমার পেজ বেছে নিন (কাস্টমার খাতা):</h4>
+            <div id="customer-tabs-list" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+        </div>
+
+        <!-- মূল খাতার বক্স -->
+        <div class="box" id="printable-area">
+            <!-- আকর্ষণীয় কাস্টমার প্রোফাইল বক্স (কাস্টমার ভিউ বা সিলেক্টেড কাস্টমার এবং PDF-এ দৃশ্যমান) -->
+            <div id="pdf-customer-profile" class="profile-card" style="display:none;">
+                <div class="profile-header-row">
+                    <div class="profile-title-group">
+                        <div class="profile-avatar" id="cust-profile-avatar">👤</div>
+                        <div>
+                            <h2 class="profile-name-text" id="cust-profile-name">-</h2>
+                            <span style="font-size:12px; color:#475569;">কাস্টমার অ্যাকাউন্ট বিবরণ</span>
+                        </div>
+                    </div>
+                    <span class="profile-badge" id="cust-profile-badge">Customer Profile</span>
+                </div>
+                <div class="profile-meta-grid">
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">ইউজার আইডি</span>
+                        <span class="profile-meta-value" id="cust-profile-id">-</span>
+                    </div>
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">মোবাইল নম্বর</span>
+                        <span class="profile-meta-value" id="cust-profile-phone">-</span>
+                    </div>
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">ঠিকানা</span>
+                        <span class="profile-meta-value" id="cust-profile-address">-</span>
+                    </div>
+                    <div class="profile-meta-item">
+                        <span class="profile-meta-label">ইমেইল</span>
+                        <span class="profile-meta-value" id="cust-profile-email">-</span>
+                    </div>
+                </div>
+                <!-- প্রোফাইলে সংযুক্ত কাগজ বা দলিল দেখানোর অংশ -->
+                <div id="cust-profile-docs-wrapper" class="profile-docs-section" style="display:none;">
+                    <span class="profile-meta-label" style="color:#1e40af;">📎 সংযুক্ত কাগজ ও দলিলসমূহ (ক্লিক করে দেখুন):</span>
+                    <div id="cust-profile-docs-list" class="doc-chip-list"></div>
+                </div>
+            </div>
+
+            <div id="input-form">
+                <span id="admin-select-wrapper" style="flex: 1; min-width: 200px;">
+                    <select id="data-customer-select" onchange="onCustomerSelectChange()" style="width:100%;"><option value="">--সিলেক্ট কাস্টমার--</option></select>
+                </span>
+                <input type="date" id="date" title="তারিখ">
+                <input type="time" id="time" title="সময় (খালি রাখলে বর্তমান সময় বসবে)">
+                <input type="text" id="phone" placeholder="ফোন নম্বর">
+                <input type="text" id="address" placeholder="ঠিকানা">
+                <input type="text" id="trx-id" placeholder="Transaction ID">
+                <input type="text" id="details" placeholder="বিবরণ">
+                <input type="number" id="debit" placeholder="Debit (খরচ)">
+                <input type="number" id="credit" placeholder="Credit (জমা)">
+                <label class="file-upload-label" title="এই হিসাবের সাথে কাগজ বা দলিল যুক্ত করুন">
+                    📎 <span id="entry-doc-label-text">কাগজ/দলিল যুক্ত করুন</span>
+                    <input type="file" id="entry-doc-input" accept="image/*,.pdf" onchange="handleEntryDocSelect(event)" style="display:none;">
+                </label>
+                <div id="entry-doc-preview-bar" style="width:100%; display:none;"></div>
+                <button class="save-entry-btn" onclick="saveData()">সেভ করুন</button>
+            </div>
+            
+            <div style="margin-top: 15px; display: flex; flex-wrap: wrap; gap: 8px;" class="no-print">
+                <button class="print-btn" onclick="window.print()">🖨️ প্রিন্ট</button>
+                <button class="pdf-btn" onclick="downloadPDF()">📄 PDF ডাউনলোড</button>
+                <button class="excel-btn" onclick="downloadExcel()">📊 Excel</button>
+            </div>
+
+            <!-- মোট Debit, মোট Credit এবং ব্যালেন্স কার্ড -->
+            <div class="summary">
+                <div class="card" style="border-top: 4px solid #dc2626;">
+                    <h3>মোট Debit</h3>
+                    <p id="totalDebit" style="font-size:18px; font-weight:bold; color:#dc2626;">0</p>
+                </div>
+                <div class="card" style="border-top: 4px solid #16a34a;">
+                    <h3>মোট Credit</h3>
+                    <p id="totalCredit" style="font-size:18px; font-weight:bold; color:#16a34a;">0</p>
+                </div>
+                <div class="card" style="border-top: 4px solid #2563eb; background:#f0fdf4;">
+                    <h3>ব্যালেন্স</h3>
+                    <p id="balance" style="font-size:20px; font-weight:bold; color:#2563eb;">0</p>
+                </div>
+            </div>
+
+            <!-- সার্চ এবং ফিল্টার সেকশন -->
+            <div class="search-filter-container no-print">
+                <div class="search-box">
+                    <input type="text" id="search" placeholder="🔍 নাম, ঠিকানা, নম্বর, সময় বা Trx ID খুঁজুন..." onkeyup="renderTable()">
+                </div>
+                <div class="filter-box" style="display: flex; gap: 5px; flex-wrap: wrap;">
+                    <select id="date-filter" onchange="toggleCustomDateInput()">
+                        <option value="all">📅 সব রেকর্ড</option>
+                        <option value="today">⏱️ আজকের দিন (১ দিন)</option>
+                        <option value="7days">⏱️ গত ৭ দিন</option>
+                        <option value="1month">⏱️ গত ১ মাস</option>
+                        <option value="1year">⏱️ গত ১ বছর</option>
+                        <option value="custom">📅 নির্দিষ্ট তারিখ (Custom)</option>
+                    </select>
+
+                    <!-- কাস্টম ১ দিন বা একাধিক দিনের রেঞ্জ বেছে নেওয়ার জন্য -->
+                    <input type="date" id="custom-date-start" onchange="renderTable()" style="display:none;">
+                    <input type="date" id="custom-date-end" onchange="renderTable()" style="display:none;" title="শেষ তারিখ (ঐচ্ছিক)">
+                </div>
+            </div>
+
+            <!-- তারিখ ভিত্তিক এন্ট্রি গণনাকারী -->
+            <div class="daily-stats-box no-print">
+                <h4 style="text-align: left; color: #0f172a;">📅 তারিখ অনুযায়ী এন্ট্রি গণনাকারী (কোন দিন কতটি নম্বর/ডাটা এড হয়েছে)</h4>
+                <div class="table-responsive">
+                    <table class="daily-stats-table">
+                        <thead>
+                            <tr>
+                                <th>তারিখ</th>
+                                <th>মোট এন্ট্রি (সংখ্যা)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="daily-stats-tbody">
+                            <tr><td colspan="2">কোন ডাটা নেই</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="statement-table-area" class="table-responsive">
+                <table id="account-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">ক্রমিক নং</th>
+                            <th id="th-customer-name">কাস্টমার নাম</th>
+                            <th>মোবাইল</th>
+                            <th>ঠিকানা</th>
+                            <th>তারিখ</th>
+                            <th>সময়</th>
+                            <th>Trx ID</th>
+                            <th>বিবরণ</th>
+                            <th>কাগজ/দলিল</th>
+                            <th>Debit</th>
+                            <th>Credit</th>
+                            <th id="action-header">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody"></tbody>
+                    <tfoot id="table-footer" style="font-weight: bold; background: #f8fafc;">
+                        <tr>
+                            <td colspan="9" style="text-align: right;">সর্বমোট:</td>
+                            <td id="foot-total-debit" style="color: red;">0</td>
+                            <td id="foot-total-credit" style="color: green;">0</td>
+                            <td id="foot-action-cell"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// ==========================================
+// 📧 EMAILJS CONFIGURATION SETUP
+// ==========================================
+(function(){
+    emailjs.init("YOUR_EMAILJS_PUBLIC_KEY"); 
+})();
+
+const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID";   
+const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID"; 
+
+// ==========================================
+// 🔴 FIREBASE CONFIGURATION SETUP
+// ==========================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCmQjTSbivs8uVbk_l8wKottKMEHAwrYus",
+  authDomain: "my-debit-credit-4d96c.firebaseapp.com",
+  databaseURL: "https://my-debit-credit-4d96c-default-rtdb.firebaseio.com",
+  projectId: "my-debit-credit-4d96c",
+  storageBucket: "my-debit-credit-4d96c.firebasestorage.app",
+  messagingSenderId: "567070229527",
+  appId: "1:567070229527:web:b3a9acc8f5dcc76d19c852",
+  measurementId: "G-6N5HTQ0XCZ"
+};
+
+let db = null;
+let useFirebase = false;
+
+try {
+    if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        useFirebase = true;
+    }
+} catch (e) {
+    console.error("Firebase Initialization Error: ", e);
+}
+
+let records = JSON.parse(localStorage.getItem("accounts_v2")) || [];
+let subAdminPermissions = JSON.parse(localStorage.getItem("subadmin_perms_v2")) || { edit: false, delete: false };
+
+let defaultUsers = {
+    "myadmin": {password: "myadmin", role: "admin", custName: "প্রধান অ্যাডমিন", phone: "", address: "", email: "admin@example.com", photo: null, documents: []}
+};
+
+let users = JSON.parse(localStorage.getItem("app_users_v3")) || defaultUsers;
+
+if (!users["myadmin"] || users["myadmin"].password !== "myadmin") {
+    users["myadmin"] = {password: "myadmin", role: "admin", custName: "প্রধান অ্যাডমিন", phone: "", address: "", email: "admin@example.com", photo: null, documents: []};
+    localStorage.setItem("app_users_v3", JSON.stringify(users));
+}
+
+let currentUser = null;
+let pendingUser = null;
+let generatedOTP = null;
+let editIndex = -1;
+let editingUserId = null;
+
+// প্রোফাইল ছবি ও ডকুমেন্ট হ্যান্ডলিং স্টেট
+let pendingUserPhoto = null;
+let pendingUserDocs = [];
+let pendingEntryDoc = null;
+
+// ফাইল রিডার ও অটোমেটিক ইমেজ কম্প্রেশন হেল্পার
+function processUploadedFile(file, maxDim = 1100, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+        if (!file) return reject("কোন ফাইল পাওয়া যায়নি");
+
+        if (file.type.startsWith("image/")) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement("canvas");
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const compressedDataUrl = canvas.toDataURL("image/jpeg", quality);
+                    resolve({
+                        name: file.name,
+                        type: "image/jpeg",
+                        data: compressedDataUrl
+                    });
+                };
+                img.onerror = () => reject("ছবি প্রসেস করতে সমস্যা হয়েছে");
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            if (file.size > 750 * 1024) {
+                alert(`"${file.name}" ফাইলটি ৭৫০ KB-এর বেশি বড়! দয়া করে ৭৫০ KB-এর নিচের PDF বা ছবি দিন।`);
+                return reject("File too large");
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                resolve({
+                    name: file.name,
+                    type: file.type || "application/pdf",
+                    data: e.target.result
+                });
+            };
+            reader.onerror = () => reject("ফাইল পড়তে সমস্যা হয়েছে");
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// প্রোফাইল ছবি সিলেক্ট হ্যান্ডলার
+async function handleUserPhotoSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+        pendingUserPhoto = await processUploadedFile(file, 450, 0.78);
+        renderPendingUserPhoto();
+    } catch (err) {
+        console.warn(err);
+    }
+    event.target.value = "";
+}
+
+function clearPendingUserPhoto() {
+    pendingUserPhoto = null;
+    renderPendingUserPhoto();
+}
+
+function renderPendingUserPhoto() {
+    const container = document.getElementById("user-pending-photo-preview");
+    const labelText = document.getElementById("user-photo-label-text");
+    if (!container) return;
+
+    if (pendingUserPhoto && pendingUserPhoto.data) {
+        if (labelText) labelText.innerText = "ছবি যুক্ত হয়েছে ✓";
+        container.innerHTML = `
+            <span class="doc-chip" onclick="openDocModalByObj(pendingUserPhoto)">
+                <img src="${pendingUserPhoto.data}" alt="Preview" style="width:22px; height:22px; border-radius:50%; object-fit:cover;">
+                ${pendingUserPhoto.name || 'প্রোফাইল ছবি'}
+                <span class="doc-remove-x" onclick="event.stopPropagation(); clearPendingUserPhoto()" title="ছবি মুছুন">×</span>
+            </span>
+        `;
+    } else {
+        if (labelText) labelText.innerText = "প্রোফাইল ছবি";
+        container.innerHTML = "";
+    }
+}
+
+// কাস্টমার প্রোফাইল ফর্মে ডকুমেন্ট সিলেক্ট হ্যান্ডলার
+async function handleUserDocSelect(event) {
+    const files = Array.from(event.target.files || []);
+    for (const file of files) {
+        try {
+            const processed = await processUploadedFile(file);
+            pendingUserDocs.push(processed);
+        } catch (err) {
+            console.warn(err);
+        }
+    }
+    event.target.value = "";
+    renderPendingUserDocs();
+}
+
+function removePendingUserDoc(idx) {
+    pendingUserDocs.splice(idx, 1);
+    renderPendingUserDocs();
+}
+
+function renderPendingUserDocs() {
+    const container = document.getElementById("user-pending-docs-preview");
+    if (!container) return;
+    container.innerHTML = "";
+    pendingUserDocs.forEach((doc, idx) => {
+        container.innerHTML += `
+            <span class="doc-chip" onclick="openDocModalByObj(pendingUserDocs[${idx}])">
+                📄 ${doc.name}
+                <span class="doc-remove-x" onclick="event.stopPropagation(); removePendingUserDoc(${idx})" title="মুছুন">×</span>
+            </span>
+        `;
+    });
+}
+
+// হিসাব এন্ট্রি ফর্মে ডকুমেন্ট সিলেক্ট হ্যান্ডলার
+async function handleEntryDocSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    try {
+        pendingEntryDoc = await processUploadedFile(file);
+        updateEntryDocPreview();
+    } catch (err) {
+        console.warn(err);
+    }
+    event.target.value = "";
+}
+
+function clearPendingEntryDoc() {
+    pendingEntryDoc = null;
+    updateEntryDocPreview();
+}
+
+function updateEntryDocPreview() {
+    const labelText = document.getElementById("entry-doc-label-text");
+    const previewBar = document.getElementById("entry-doc-preview-bar");
+    if (!labelText || !previewBar) return;
+
+    if (pendingEntryDoc) {
+        labelText.innerText = "ফাইল যুক্ত হয়েছে ✓";
+        previewBar.style.display = "block";
+        previewBar.innerHTML = `
+            <span class="doc-chip" onclick="openDocModalByObj(pendingEntryDoc)">
+                📄 ${pendingEntryDoc.name}
+                <span class="doc-remove-x" onclick="event.stopPropagation(); clearPendingEntryDoc()" title="মুছুন">×</span>
+            </span>
+        `;
+    } else {
+        labelText.innerText = "কাগজ/দলিল যুক্ত করুন";
+        previewBar.style.display = "none";
+        previewBar.innerHTML = "";
+    }
+}
+
+// ডকুমেন্ট প্রিভিউ মডাল ওপেন ও ক্লোজ
+function openDocModalByObj(docObj) {
+    if (!docObj || !docObj.data) return;
+    const modal = document.getElementById("doc-preview-modal");
+    const title = document.getElementById("doc-modal-title");
+    const body = document.getElementById("doc-modal-body");
+    const dlLink = document.getElementById("doc-modal-download");
+
+    title.innerText = "📄 " + (docObj.name || "সংযুক্ত ফাইল/ছবি");
+    dlLink.href = docObj.data;
+    dlLink.download = docObj.name || "document";
+
+    if (docObj.type && docObj.type.startsWith("image/")) {
+        body.innerHTML = `<img src="${docObj.data}" alt="${docObj.name}">`;
+    } else {
+        body.innerHTML = `<iframe src="${docObj.data}"></iframe>`;
+    }
+
+    modal.style.display = "flex";
+}
+
+function openUserPhotoModal(username) {
+    if (!users[username] || !users[username].photo || !users[username].photo.data) return;
+    openDocModalByObj(users[username].photo);
+}
+
+function openUserSavedDoc(username, docIdx) {
+    if (!users[username] || !users[username].documents || !users[username].documents[docIdx]) return;
+    openDocModalByObj(users[username].documents[docIdx]);
+}
+
+function openRecordDoc(recordIndex) {
+    if (!records[recordIndex] || !records[recordIndex].document) return;
+    openDocModalByObj(records[recordIndex].document);
+}
+
+function closeDocModal() {
+    const modal = document.getElementById("doc-preview-modal");
+    const body = document.getElementById("doc-modal-body");
+    if (modal) modal.style.display = "none";
+    if (body) body.innerHTML = "";
+}
+
+function updateCustomerProfileBox(forceShowForPdf = false) {
+    const profileBox = document.getElementById("pdf-customer-profile");
+    if (!profileBox || !currentUser) return;
+
+    const selectedCustUsername = document.getElementById("data-customer-select")
+        ? document.getElementById("data-customer-select").value
+        : "";
+
+    let targetUserObj = null;
+    let targetUsername = "";
+
+    if (currentUser.role === "customer") {
+        targetUserObj = users[currentUser.username] || currentUser;
+        targetUsername = currentUser.username;
+        profileBox.style.display = "block";
+    } else if (selectedCustUsername && users[selectedCustUsername]) {
+        targetUserObj = users[selectedCustUsername];
+        targetUsername = selectedCustUsername;
+        profileBox.style.display = "block";
+    } else if (forceShowForPdf) {
+        targetUserObj = {
+            custName: "সকল কাস্টমারের হিসাব",
+            phone: "-",
+            address: "-",
+            email: "-",
+            photo: null,
+            documents: []
+        };
+        targetUsername = "All Customers";
+        profileBox.style.display = "block";
+    } else {
+        profileBox.style.display = "none";
+        return;
+    }
+
+    // প্রোফাইল ছবি সেট করা
+    const avatarEl = document.getElementById("cust-profile-avatar");
+    if (avatarEl) {
+        if (targetUserObj.photo && targetUserObj.photo.data) {
+            const clickAttr = users[targetUsername] ? `onclick="openUserPhotoModal('${targetUsername}')"` : "";
+            avatarEl.innerHTML = `<img src="${targetUserObj.photo.data}" alt="${targetUserObj.custName || targetUsername}" ${clickAttr} title="ছবি বড় করে দেখুন">`;
+        } else {
+            avatarEl.innerHTML = "👤";
+        }
+    }
+
+    document.getElementById("cust-profile-name").innerText = targetUserObj.custName || targetUsername || "-";
+    document.getElementById("cust-profile-id").innerText = targetUsername || "-";
+    document.getElementById("cust-profile-phone").innerText = targetUserObj.phone || "-";
+    document.getElementById("cust-profile-address").innerText = targetUserObj.address || "-";
+    document.getElementById("cust-profile-email").innerText = targetUserObj.email || "-";
+    document.getElementById("cust-profile-badge").innerText =
+        (targetUserObj.role ? targetUserObj.role.toUpperCase() : "STATEMENT");
+
+    // কাস্টমার প্রোফাইলে সংযুক্ত দলিল/কাগজ দেখানো
+    const docsWrapper = document.getElementById("cust-profile-docs-wrapper");
+    const docsList = document.getElementById("cust-profile-docs-list");
+    const userDocs = Array.isArray(targetUserObj.documents) ? targetUserObj.documents : [];
+
+    if (userDocs.length > 0 && users[targetUsername]) {
+        docsWrapper.style.display = "block";
+        docsList.innerHTML = "";
+        userDocs.forEach((doc, idx) => {
+            docsList.innerHTML += `
+                <button type="button" class="doc-chip" onclick="openUserSavedDoc('${targetUsername}', ${idx})">
+                    📄 ${doc.name || ('দলিল #' + (idx + 1))}
+                </button>
+            `;
+        });
+    } else {
+        docsWrapper.style.display = "none";
+        docsList.innerHTML = "";
+    }
+}
+
+function getCurrentTimeHHMM() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+}
+
+function formatTime12Hour(timeStr) {
+    if (!timeStr) return "-";
+    const parts = timeStr.split(":");
+    if (parts.length < 2) return timeStr;
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1];
+    if (isNaN(hours)) return timeStr;
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+}
+
+// পেজ পরিবর্তন করার ফাংশন (আলাদা Admin Page ও Ledger Page)
+function switchMainPage(pageName) {
+    const ledgerView = document.getElementById("ledger-page-view");
+    const adminView = document.getElementById("admin-page-view");
+    const btnLedger = document.getElementById("btn-tab-ledger");
+    const btnAdmin = document.getElementById("btn-tab-admin");
+
+    if (pageName === "admin" && currentUser && currentUser.role === "admin") {
+        ledgerView.style.display = "none";
+        adminView.style.display = "block";
+        btnLedger.classList.remove("active");
+        btnAdmin.classList.add("active");
+        renderUserList();
+    } else {
+        adminView.style.display = "none";
+        ledgerView.style.display = "block";
+        btnAdmin.classList.remove("active");
+        btnLedger.classList.add("active");
+        renderTable();
+    }
+}
+
+function syncWithFirebase() {
+    const statusText = document.getElementById("db-status-text");
+    const syncTimeText = document.getElementById("sync-time-text");
+
+    if (!useFirebase || !db) {
+        if(statusText) statusText.innerHTML = "<span style='color:#d97706;'>অফলাইন (Local Storage)</span>";
+        return;
+    }
+
+    if(statusText) statusText.innerHTML = "<span style='color:#16a34a;'>অনলাইন (Connected 🟢)</span>";
+
+    db.collection("accounts").onSnapshot((snapshot) => {
+        records = [];
+        snapshot.forEach((doc) => {
+            records.push({ firestoreId: doc.id, ...doc.data() });
+        });
+        localStorage.setItem("accounts_v2", JSON.stringify(records));
+        renderTable();
+        if(syncTimeText) syncTimeText.innerText = "সিঙ্ক: " + new Date().toLocaleTimeString();
+    }, (error) => {
+        console.error("Firestore accounts error: ", error);
+        if(statusText) statusText.innerHTML = "<span style='color:#dc2626;'>রুলস বা কানেকশন ত্রুটি! (Rules Check করুন)</span>";
+    });
+
+    db.collection("users").onSnapshot((snapshot) => {
+        snapshot.forEach((doc) => {
+            users[doc.id] = doc.data();
+        });
+        localStorage.setItem("app_users_v3", JSON.stringify(users));
+        populateCustomerDropdown();
+        updateCustomerProfileBox();
+        if(currentUser && currentUser.role === 'admin') renderUserList();
+    });
+
+    db.collection("settings").doc("subadmin_perms").onSnapshot((doc) => {
+        if (doc.exists) {
+            subAdminPermissions = doc.data();
+            localStorage.setItem("subadmin_perms_v2", JSON.stringify(subAdminPermissions));
+            setupRoleUI();
+            renderTable();
+        }
+    });
+}
+
+function login() {
+    const uName = document.getElementById("username").value.trim().toLowerCase();
+    const uPass = document.getElementById("password").value;
+
+    if(users[uName] && users[uName].password === uPass) {
+        let userRole = users[uName].role;
+
+        if (userRole === "admin") {
+            completeLogin(users[uName], uName);
+        } else {
+            if(!users[uName].email) {
+                alert("এই ইউজারের কোনো ইমেইল যুক্ত করা নেই! দয়া করে অ্যাডমিনের সাথে যোগাযোগ করুন।");
+                return;
+            }
+            
+            pendingUser = users[uName];
+            pendingUser.username = uName;
+            
+            generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            let templateParams = {
+                to_name: users[uName].custName || uName,
+                to_email: users[uName].email,
+                otp_code: generatedOTP
+            };
+
+            alert("আপনার ইমেইলে OTP কোড পাঠানো হচ্ছে, দয়া করে অপেক্ষা করুন...");
+
+            emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+                .then(function(response) {
+                    alert("আপনার ইমেইলে ৬ ডিজিটের OTP কোডটি সফলভাবে পাঠানো হয়েছে!");
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("otp-screen").style.display = "block";
+                }, function(error) {
+                    console.error("EmailJS Error:", error);
+                    alert("ইমেইল পাঠাতে সমস্যা হয়েছে! সাধারণ ডেমো মোডে OTP কোডটি হলো: " + generatedOTP);
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("otp-screen").style.display = "block";
+                });
+        }
+    } else {
+        alert("ভুল ইউজার আইডি অথবা পাসওয়ার্ড!");
+    }
+}
+
+function verifyOTP() {
+    const inputCode = document.getElementById("otp-input").value.trim();
+    if(inputCode === generatedOTP) {
+        alert("OTP সফলভাবে ভেরিফাই করা হয়েছে!");
+        document.getElementById("otp-screen").style.display = "none";
+        document.getElementById("otp-input").value = "";
+        completeLogin(pendingUser, pendingUser.username);
+        pendingUser = null;
+        generatedOTP = null;
+    } else {
+        alert("ভুল OTP কোড! আবার চেষ্টা করুন।");
+    }
+}
+
+function cancelOTP() {
+    pendingUser = null;
+    generatedOTP = null;
+    document.getElementById("otp-input").value = "";
+    document.getElementById("otp-screen").style.display = "none";
+    document.getElementById("login-screen").style.display = "block";
+}
+
+function completeLogin(userObj, uName) {
+    currentUser = userObj;
+    currentUser.username = uName;
+    
+    document.getElementById("login-wrapper").style.display = "none";
+    document.getElementById("main-screen").style.display = "block";
+    document.getElementById("user-role-display").innerText = "অ্যাকাউন্ট টাইপ: " + currentUser.role.toUpperCase();
+    
+    updateCustomerProfileBox();
+
+    setupRoleUI();
+    populateCustomerDropdown();
+    switchMainPage('ledger');
+    if(currentUser.role === 'admin') renderUserList();
+    
+    syncWithFirebase();
+}
+
+function logout() {
+    currentUser = null;
+    document.getElementById("username").value = "";
+    document.getElementById("password").value = "";
+    document.getElementById("login-wrapper").style.display = "flex";
+    document.getElementById("login-screen").style.display = "block";
+    document.getElementById("otp-screen").style.display = "none";
+    document.getElementById("main-screen").style.display = "none";
+}
+
+function setupRoleUI() {
+    const inputForm = document.getElementById("input-form");
+    const adminNavBar = document.getElementById("admin-nav-bar");
+    const adminPageView = document.getElementById("admin-page-view");
+    const adminSelectWrapper = document.getElementById("admin-select-wrapper");
+    
+    document.getElementById("perm-edit").checked = subAdminPermissions.edit || false;
+    document.getElementById("perm-delete").checked = subAdminPermissions.delete || false;
+
+    if(currentUser.role === "admin") {
+        inputForm.style.display = "flex";
+        adminNavBar.style.display = "flex";
+        adminSelectWrapper.style.display = "block";
+    } else if(currentUser.role === "subadmin") {
+        inputForm.style.display = "flex";
+        adminNavBar.style.display = "none";
+        adminPageView.style.display = "none";
+        adminSelectWrapper.style.display = "block";
+    } else if(currentUser.role === "customer") {
+        inputForm.style.display = "none"; 
+        adminNavBar.style.display = "none";
+        adminPageView.style.display = "none";
+    }
+}
+
+function populateCustomerDropdown() {
+    const select = document.getElementById("data-customer-select");
+    const tabsList = document.getElementById("customer-tabs-list");
+    const tabsContainer = document.getElementById("customer-tabs-container");
+    
+    let currentSelection = select ? select.value : "";
+    if(select) {
+        select.innerHTML = '<option value="">--সব কাস্টমার (সকল পেজ)--</option>';
+    }
+
+    if(tabsList) {
+        let activeClassAll = !currentSelection ? "background:#2563eb; color:white;" : "background:#e2e8f0; color:#1e293b;";
+        tabsList.innerHTML = `<button onclick="switchCustomerPage('')" style="${activeClassAll} border:none; padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer;">📁 সব কাস্টমার (All)</button>`;
+    }
+
+    for(let u in users) {
+        if(users[u].role === 'customer') {
+            let nameDisplay = users[u].custName ? `${users[u].custName} (${u})` : u;
+            if(select) {
+                select.innerHTML += `<option value="${u}">${nameDisplay}</option>`;
+            }
+            if(tabsList) {
+                let isActive = (currentSelection === u);
+                let btnStyle = isActive ? "background:#2563eb; color:white;" : "background:#f1f5f9; color:#334155; border:1px solid #cbd5e1;";
+                tabsList.innerHTML += `<button onclick="switchCustomerPage('${u}')" style="${btnStyle} padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer;">👤 ${users[u].custName || u}</button>`;
+            }
+        }
+    }
+
+    if(select) select.value = currentSelection;
+
+    if(currentUser && currentUser.role === 'customer') {
+        if(tabsContainer) tabsContainer.style.display = "none";
+    } else {
+        if(tabsContainer) tabsContainer.style.display = "block";
+    }
+}
+
+function switchCustomerPage(username) {
+    const select = document.getElementById("data-customer-select");
+    if(select) {
+        select.value = username;
+        onCustomerSelectChange();
+    }
+}
+
+function onCustomerSelectChange() {
+    const selectedUser = document.getElementById("data-customer-select").value;
+    if (selectedUser && users[selectedUser]) {
+        document.getElementById("phone").value = users[selectedUser].phone || "";
+        document.getElementById("address").value = users[selectedUser].address || "";
+    } else {
+        document.getElementById("phone").value = "";
+        document.getElementById("address").value = "";
+    }
+    populateCustomerDropdown();
+    updateCustomerProfileBox();
+    renderTable();
+}
+
+function createNewUser() {
+    const newId = document.getElementById("new-username").value.trim().toLowerCase();
+    const newPass = document.getElementById("new-password").value.trim();
+    const newEmail = document.getElementById("new-email").value.trim();
+    const newRole = document.getElementById("new-role").value;
+    const newCustName = document.getElementById("new-custname").value.trim();
+    const newPhone = document.getElementById("new-phone").value.trim();
+    const newAddress = document.getElementById("new-address").value.trim();
+
+    if(!newId || !newPass || !newEmail) {
+        alert("ইউজার আইডি, পাসওয়ার্ড এবং ইমেইল সম্পূর্ণ লিখুন!");
+        return;
+    }
+    if(newRole === "customer" && !newCustName){
+        alert("কাস্টমারের পূর্ণ নাম দিন!");
+        return;
+    }
+
+    if(!editingUserId && users[newId]) {
+        alert("এই ইউজার আইডিটি ইতিমধ্যে রেজিস্টার্ড আছে!");
+        return;
+    }
+
+    const userObj = {
+        password: newPass,
+        email: newEmail,
+        role: newRole,
+        custName: newCustName || newId,
+        phone: newPhone,
+        address: newAddress,
+        photo: pendingUserPhoto || null,
+        documents: [...pendingUserDocs]
+    };
+    
+    if(editingUserId) {
+        if(editingUserId !== newId) {
+            delete users[editingUserId];
+            if(useFirebase && db) {
+                db.collection("users").doc(editingUserId).delete();
+            }
+        }
+        users[newId] = userObj;
+        alert("ইউজারের তথ্য, ছবি ও ডকুমেন্ট আপডেট করা হয়েছে।");
+    } else {
+        users[newId] = userObj;
+        alert("নতুন অ্যাকাউন্ট তৈরি হয়েছে।");
+    }
+
+    localStorage.setItem("app_users_v3", JSON.stringify(users));
+    
+    if(useFirebase && db) {
+        db.collection("users").doc(newId).set(userObj);
+    }
+
+    resetUserForm();
+    renderUserList();
+    populateCustomerDropdown();
+    updateCustomerProfileBox();
+}
+
+function editUser(uName) {
+    if(!users[uName]) return;
+    editingUserId = uName;
+    const u = users[uName];
+
+    document.getElementById("new-username").value = uName;
+    document.getElementById("new-password").value = u.password || "";
+    document.getElementById("new-email").value = u.email || "";
+    document.getElementById("new-custname").value = u.custName || "";
+    document.getElementById("new-phone").value = u.phone || "";
+    document.getElementById("new-address").value = u.address || "";
+    document.getElementById("new-role").value = u.role || "customer";
+
+    pendingUserPhoto = u.photo || null;
+    renderPendingUserPhoto();
+
+    pendingUserDocs = Array.isArray(u.documents) ? [...u.documents] : [];
+    renderPendingUserDocs();
+
+    document.getElementById("user-form-heading").innerText = "✏️ ইউজার তথ্য সংশোধন:";
+    document.getElementById("user-save-btn").innerText = "আপডেট করুন 💾";
+    document.getElementById("user-save-btn").style.background = "#f59e0b";
+    document.getElementById("user-cancel-btn").style.display = "inline-block";
+}
+
+function cancelUserEdit() {
+    resetUserForm();
+}
+
+function resetUserForm() {
+    editingUserId = null;
+    pendingUserPhoto = null;
+    renderPendingUserPhoto();
+    pendingUserDocs = [];
+    renderPendingUserDocs();
+    document.getElementById("new-username").value = "";
+    document.getElementById("new-password").value = "";
+    document.getElementById("new-email").value = "";
+    document.getElementById("new-custname").value = "";
+    document.getElementById("new-phone").value = "";
+    document.getElementById("new-address").value = "";
+    document.getElementById("new-role").value = "subadmin";
+
+    document.getElementById("user-form-heading").innerText = "➕ নতুন আইডি:";
+    document.getElementById("user-save-btn").innerText = "তৈরি করুন";
+    document.getElementById("user-save-btn").style.background = "#2563eb";
+    document.getElementById("user-cancel-btn").style.display = "none";
+}
+
+function renderUserList() {
+    const tbody = document.getElementById("user-list-tbody");
+    tbody.innerHTML = "";
+    
+    for(let u in users) {
+        let roleColor = users[u].role === 'admin' ? 'red' : (users[u].role === 'subadmin' ? 'orange' : 'blue');
+        const docs = Array.isArray(users[u].documents) ? users[u].documents : [];
+        let docCellHtml = docs.length > 0
+            ? docs.map((d, idx) => `<button type="button" class="view-doc-btn" style="margin:2px;" onclick="openUserSavedDoc('${u}', ${idx})">📄 ${d.name || ('দলিল ' + (idx+1))}</button>`).join("")
+            : "-";
+
+        let photoCellHtml = (users[u].photo && users[u].photo.data)
+            ? `<img src="${users[u].photo.data}" class="user-table-avatar" alt="${u}" onclick="openUserPhotoModal('${u}')" title="ছবি দেখুন">`
+            : `<span style="font-size:18px;">👤</span>`;
+        
+        tbody.innerHTML += `<tr>
+            <td>${photoCellHtml}</td>
+            <td><strong>${u}</strong></td>
+            <td><span style="color:${roleColor}; font-weight:bold;">${users[u].role.toUpperCase()}</span></td>
+            <td>${users[u].email || '-'}</td>
+            <td>${users[u].custName || '-'}</td>
+            <td>${users[u].phone || '-'}</td>
+            <td>${users[u].address || '-'}</td>
+            <td style="white-space:normal;">${docCellHtml}</td>
+            <td><code>${users[u].password}</code></td>
+            <td>
+                <button onclick="editUser('${u}')" style="background:#f59e0b; color:white; border:none; padding:2px 8px; border-radius:3px; margin-right:4px;">Edit</button>
+                <button onclick="deleteUser('${u}')" style="background:red; color:white; border:none; padding:2px 8px; border-radius:3px;">Delete</button>
+            </td>
+        </tr>`;
+    }
+}
+
+function deleteUser(uName) {
+    if(confirm("আপনি কি '" + uName + "' আইডিটি ডিলিট করতে চান?")) {
+        delete users[uName];
+        localStorage.setItem("app_users_v3", JSON.stringify(users));
+        if(useFirebase && db) {
+            db.collection("users").doc(uName).delete();
+        }
+        if(editingUserId === uName) resetUserForm();
+        renderUserList();
+        populateCustomerDropdown();
+    }
+}
+
+function updatePermissions() {
+    subAdminPermissions.edit = document.getElementById("perm-edit").checked;
+    subAdminPermissions.delete = document.getElementById("perm-delete").checked;
+    localStorage.setItem("subadmin_perms_v2", JSON.stringify(subAdminPermissions));
+    
+    if(useFirebase && db) {
+        db.collection("settings").doc("subadmin_perms").set(subAdminPermissions);
+    }
+    renderTable(); 
+}
+
+function saveData(){
+    const custSelect = document.getElementById("data-customer-select").value;
+    const date = document.getElementById("date").value;
+    const time = document.getElementById("time").value || getCurrentTimeHHMM();
+    const phone = document.getElementById("phone").value;
+    const address = document.getElementById("address").value;
+    const trxId = document.getElementById("trx-id").value;
+    const details = document.getElementById("details").value;
+    const debit = Number(document.getElementById("debit").value)||0;
+    const credit = Number(document.getElementById("credit").value)||0;
+
+    if((currentUser.role === 'admin' || currentUser.role === 'subadmin') && !custSelect) {
+        alert("দয়া করে একজন কাস্টমার সিলেক্ট করুন");
+        return;
+    }
+    if(!date || !details){
+        alert("তারিখ ও বিবরণ দিন");
+        return;
+    }
+
+    const createdAt = (editIndex !== -1 && records[editIndex].createdAt) ? records[editIndex].createdAt : Date.now();
+    const data = {
+        customer: custSelect,
+        date,
+        time,
+        phone,
+        address,
+        trxId,
+        details,
+        debit,
+        credit,
+        document: pendingEntryDoc || null,
+        createdAt
+    };
+
+    if(editIndex === -1){
+        records.push(data);
+        if(useFirebase && db) {
+            db.collection("accounts").add(data);
+        }
+    } else {
+        if(currentUser.role === "subadmin" && !subAdminPermissions.edit) {
+            alert("আপনার এডিট করার পারমিশন নেই!");
+            clearForm();
+            editIndex = -1;
+            return;
+        }
+        let oldRecord = records[editIndex];
+        records[editIndex] = data;
+        if(useFirebase && db && oldRecord.firestoreId) {
+            db.collection("accounts").doc(oldRecord.firestoreId).update(data);
+        }
+        editIndex = -1;
+    }
+
+    localStorage.setItem("accounts_v2", JSON.stringify(records));
+    clearForm();
+    renderTable();
+}
+
+function toggleCustomDateInput() {
+    const filterValue = document.getElementById("date-filter").value;
+    const startInput = document.getElementById("custom-date-start");
+    const endInput = document.getElementById("custom-date-end");
+
+    if (filterValue === "custom") {
+        startInput.style.display = "inline-block";
+        endInput.style.display = "inline-block";
+    } else {
+        startInput.style.display = "none";
+        endInput.style.display = "none";
+        startInput.value = "";
+        endInput.value = "";
+    }
+    renderTable();
+}
+
+function renderDailyStats(visibleRecords) {
+    const statsTbody = document.getElementById("daily-stats-tbody");
+    if(!statsTbody) return;
+
+    let countsByDate = {};
+
+    visibleRecords.forEach(item => {
+        let d = item.date || 'অনির্দিষ্ট';
+        countsByDate[d] = (countsByDate[d] || 0) + 1;
+    });
+
+    let dates = Object.keys(countsByDate).sort().reverse();
+
+    if(dates.length === 0) {
+        statsTbody.innerHTML = `<tr><td colspan="2">কোন ডাটা নেই</td></tr>`;
+        return;
+    }
+
+    statsTbody.innerHTML = "";
+    dates.forEach(d => {
+        statsTbody.innerHTML += `
+            <tr>
+                <td><strong>${d}</strong></td>
+                <td><span style="color:#2563eb; font-weight:bold;">${countsByDate[d]} টি</span></td>
+            </tr>
+        `;
+    });
+}
+
+function renderTable(){
+    const tbody = document.getElementById("tbody");
+    const search = document.getElementById("search").value.toLowerCase().trim();
+    const filterValue = document.getElementById("date-filter").value;
+    const customStart = document.getElementById("custom-date-start").value;
+    const customEnd = document.getElementById("custom-date-end").value;
+    const actionHeader = document.getElementById("action-header");
+    const thCustomerName = document.getElementById("th-customer-name");
+    const selectedAdminCustomer = document.getElementById("data-customer-select").value;
+
+    tbody.innerHTML = "";
+    let totalDebit = 0;
+    let totalCredit = 0;
+
+    // তারিখ ও সময় অনুযায়ী সিরিয়াল সাজানো
+    records.sort((a, b) => {
+        if (a.date !== b.date) {
+            return (a.date || "").localeCompare(b.date || "");
+        }
+        const timeA = a.time || "";
+        const timeB = b.time || "";
+        if (timeA !== timeB) {
+            return timeA.localeCompare(timeB);
+        }
+        return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+
+    const todayObj = new Date();
+    const yyyy = todayObj.getFullYear();
+    const mm = String(todayObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(todayObj.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    let targetDate = new Date();
+
+    if(filterValue === "7days") {
+        targetDate.setDate(todayObj.getDate() - 7);
+    } else if(filterValue === "1month") {
+        targetDate.setMonth(todayObj.getMonth() - 1);
+    } else if(filterValue === "1year") {
+        targetDate.setFullYear(todayObj.getFullYear() - 1);
+    }
+
+    let showActionColumn = (currentUser.role !== "customer");
+    actionHeader.style.display = showActionColumn ? "table-cell" : "none";
+    thCustomerName.style.display = (currentUser.role === "customer") ? "none" : "table-cell";
+
+    let visibleRecords = [];
+    let slNo = 1;
+
+    records.forEach((item, index)=>{
+        let passDateFilter = false;
+
+        if (filterValue === "all") {
+            passDateFilter = true;
+        } else if (filterValue === "today") {
+            passDateFilter = (item.date === todayStr);
+        } else if (filterValue === "custom") {
+            if (customStart && !customEnd) {
+                passDateFilter = (item.date === customStart);
+            } else if (customStart && customEnd) {
+                passDateFilter = (item.date >= customStart && item.date <= customEnd);
+            } else {
+                passDateFilter = true;
+            }
+        } else {
+            const itemDate = new Date(item.date);
+            passDateFilter = (itemDate >= targetDate);
+        }
+
+        let passCustomerFilter = false;
+        if(currentUser.role === "customer") {
+            if(item.customer === currentUser.username) {
+                passCustomerFilter = true;
+            }
+        } else {
+            if(!selectedAdminCustomer || item.customer === selectedAdminCustomer) {
+                passCustomerFilter = true;
+            }
+        }
+
+        let custObject = users[item.customer] || {};
+        let custFullName = custObject.custName || item.customer || 'Unknown';
+        let itemPhone = item.phone || custObject.phone || '';
+        let itemAddress = item.address || custObject.address || '';
+        let itemTrx = item.trxId || '';
+        let itemTime24 = item.time || '';
+        let itemTimeDisplay = formatTime12Hour(itemTime24);
+        let itemDocName = (item.document && item.document.name) ? item.document.name : '';
+
+        let matchesSearch = search === "" ||
+            custFullName.toLowerCase().includes(search) ||
+            (item.customer && item.customer.toLowerCase().includes(search)) ||
+            itemPhone.toLowerCase().includes(search) ||
+            itemAddress.toLowerCase().includes(search) ||
+            itemTrx.toLowerCase().includes(search) ||
+            itemTime24.toLowerCase().includes(search) ||
+            itemTimeDisplay.toLowerCase().includes(search) ||
+            itemDocName.toLowerCase().includes(search) ||
+            item.details.toLowerCase().includes(search) ||
+            item.date.includes(search);
+
+        if(passDateFilter && passCustomerFilter && matchesSearch) {
+            visibleRecords.push(item);
+            totalDebit += item.debit;
+            totalCredit += item.credit;
+
+            let docColumnHtml = (item.document && item.document.data)
+                ? `<button type="button" class="view-doc-btn" onclick="openRecordDoc(${index})">📄 দেখুন</button>`
+                : "-";
+
+            let actionButtons = "";
+            if(currentUser.role === "admin") {
+                actionButtons = `
+                    <button class="edit-btn" onclick="editData(${index})">Edit</button>
+                    <button class="delete-btn" onclick="deleteData(${index})">Delete</button>
+                `;
+            } else if(currentUser.role === "subadmin") {
+                let eBtn = subAdminPermissions.edit ? `<button class="edit-btn" onclick="editData(${index})">Edit</button>` : '';
+                let dBtn = subAdminPermissions.delete ? `<button class="delete-btn" onclick="deleteData(${index})">Delete</button>` : '';
+                actionButtons = (eBtn || dBtn) ? (eBtn + " " + dBtn) : "-";
+            }
+
+            tbody.innerHTML += `
+                <tr>
+                    <td><strong>${slNo++}</strong></td>
+                    ${currentUser.role !== "customer" ? `<td><strong>${custFullName}</strong></td>` : ''}
+                    <td>${itemPhone}</td>
+                    <td>${itemAddress}</td>
+                    <td>${item.date}</td>
+                    <td>${itemTimeDisplay}</td>
+                    <td><code>${itemTrx}</code></td>
+                    <td>${item.details}</td>
+                    <td>${docColumnHtml}</td>
+                    <td class="debit">${item.debit}</td>
+                    <td class="credit">${item.credit}</td>
+                    ${showActionColumn ? `<td>${actionButtons}</td>` : ''}
+                </tr>
+            `;
+        }
+    });
+
+    document.getElementById("totalDebit").innerText = totalDebit;
+    document.getElementById("totalCredit").innerText = totalCredit;
+    document.getElementById("balance").innerText = totalCredit - totalDebit;
+
+    document.getElementById("foot-total-debit").innerText = totalDebit;
+    document.getElementById("foot-total-credit").innerText = totalCredit;
+    document.getElementById("foot-action-cell").style.display = showActionColumn ? "table-cell" : "none";
+
+    renderDailyStats(visibleRecords);
+}
+
+function editData(index){
+    if(currentUser.role === "subadmin" && !subAdminPermissions.edit) {
+        alert("আপনার এডিট করার পারমিশন নেই!");
+        return;
+    }
+    document.getElementById("data-customer-select").value = records[index].customer || "";
+    document.getElementById("date").value = records[index].date || "";
+    document.getElementById("time").value = records[index].time || "";
+    document.getElementById("phone").value = records[index].phone || "";
+    document.getElementById("address").value = records[index].address || "";
+    document.getElementById("trx-id").value = records[index].trxId || "";
+    document.getElementById("details").value = records[index].details || "";
+    document.getElementById("debit").value = records[index].debit || 0;
+    document.getElementById("credit").value = records[index].credit || 0;
+    pendingEntryDoc = records[index].document || null;
+    updateEntryDocPreview();
+    updateCustomerProfileBox();
+    editIndex = index;
+}
+
+function deleteData(index){
+    if(currentUser.role === "subadmin" && !subAdminPermissions.delete) {
+        alert("আপনার ডিলিট করার পারমিশন নেই!");
+        return;
+    }
+    if(confirm("আপনি কি রেকর্ডটি ডিলিট করতে চান?")){
+        let targetDoc = records[index];
+        records.splice(index,1);
+        localStorage.setItem("accounts_v2", JSON.stringify(records));
+        
+        if(useFirebase && db && targetDoc.firestoreId) {
+            db.collection("accounts").doc(targetDoc.firestoreId).delete();
+        }
+        renderTable();
+    }
+}
+
+function clearForm(){
+    document.getElementById("data-customer-select").value="";
+    document.getElementById("date").value="";
+    document.getElementById("time").value="";
+    document.getElementById("phone").value="";
+    document.getElementById("address").value="";
+    document.getElementById("trx-id").value="";
+    document.getElementById("details").value="";
+    document.getElementById("debit").value="";
+    document.getElementById("credit").value="";
+    clearPendingEntryDoc();
+    updateCustomerProfileBox();
+}
+
+function downloadExcel() {
+    let originalTable = document.getElementById("account-table");
+    if (!originalTable) return;
+
+    // মূল টেবিল ঠিক রেখে ক্লোন থেকে সর্বশেষ Action কলাম বাদ দেওয়া হচ্ছে
+    let clonedTable = originalTable.cloneNode(true);
+    clonedTable.querySelectorAll("tr").forEach(row => {
+        if (row.lastElementChild) {
+            row.removeChild(row.lastElementChild);
+        }
+    });
+
+    let wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Statement" });
+    XLSX.writeFile(wb, "Account_Statement.xlsx");
+}
+
+function downloadPDF() {
+    let element = document.getElementById("printable-area");
+    let tableArea = document.getElementById("statement-table-area");
+    let table = document.getElementById("account-table");
+    if (!element) return;
+
+    const prevOverflow = tableArea ? tableArea.style.overflowX : "";
+    const prevMinWidth = table ? table.style.minWidth : "";
+
+    updateCustomerProfileBox(true);
+    if (tableArea) tableArea.style.overflowX = "visible";
+    if (table) table.style.minWidth = "100%";
+    element.classList.add("pdf-exporting");
+
+    let opt = {
+        margin:       [0.25, 0.25, 0.25, 0.25],
+        filename:     'Account_Statement.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            scrollX: 0,
+            scrollY: 0,
+            windowWidth: document.documentElement.scrollWidth
+        },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' },
+        pagebreak:    { mode: ['css', 'legacy'] }
+    };
+
+    const restoreStyles = () => {
+        if (tableArea) tableArea.style.overflowX = prevOverflow;
+        if (table) table.style.minWidth = prevMinWidth;
+        element.classList.remove("pdf-exporting");
+        updateCustomerProfileBox(false);
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+        html2pdf().set(opt).from(element).save()
+            .then(restoreStyles)
+            .catch(err => {
+                console.error("PDF generation error, switching to print:", err);
+                restoreStyles();
+                window.print();
+            });
+    } else {
+        restoreStyles();
+        window.print();
+    }
+}
+</script>
+
+</body>
+</html>
